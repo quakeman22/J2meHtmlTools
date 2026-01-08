@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Lang2ME 1.0</title>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --sidebar: #ffffff;
+            --accent: #27ae60;
+            --text: #2f3640;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg); color: var(--text); }
+        
+        /* Header & Toolbar */
+        header { background: #2f3640; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .toolbar { background: #dcdde1; padding: 8px 20px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #bcbcbc; }
+        
+        /* Main Layout */
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Sidebar */
+        #sidebar { width: 350px; background: var(--sidebar); border-right: 1px solid #dcdde1; display: flex; flex-direction: column; }
+        #search-bar { padding: 10px; border-bottom: 1px solid #eee; }
+        #search-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        #text-list { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 0; }
+        .list-item { padding: 10px; border-bottom: 1px solid #f1f1f1; cursor: pointer; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-item:hover { background: #f9f9f9; }
+        .list-item.active { background: #e1f5fe; border-left: 4px solid #0288d1; }
+        .list-item.modified { background: #d4edda !important; color: #155724; }
+
+        /* Editor Area */
+        #editor-area { flex: 1; display: flex; flex-direction: column; padding: 20px; background: white; }
+        #text-editor { flex: 1; font-family: 'Consolas', monospace; font-size: 18px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; resize: none; outline: none; }
+        #text-editor:focus { border-color: var(--accent); }
+        
+        .footer-info { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #7f8c8d; }
+        
+        button { padding: 6px 12px; cursor: pointer; border: 1px solid #999; background: #fff; border-radius: 3px; font-size: 13px; }
+        button:hover { background: #eee; }
+        .btn-primary { background: var(--accent); color: white; border: none; font-weight: bold; }
+        .btn-primary:hover { background: #219150; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight: bold; font-size: 18px;">Lang2ME</div>
+    <div id="file-name">Nenhum arquivo carregado</div>
+    <div>
+        <select id="lang-select">
+            <option value="PT">Português</option>
+            <option value="EN">English</option>
+        </select>
+        <button onclick="showCredits()">?</button>
+    </div>
+</header>
+
+<div class="toolbar">
+    <button class="btn-primary" onclick="document.getElementById('file-input').click()">Abrir Arquivo</button>
+    <button onclick="saveBin()">Salvar Binário</button>
+    <span style="color: #999;">|</span>
+    <button onclick="document.getElementById('json-input').click()">Importar JSON</button>
+    <button onclick="exportJson()">Exportar JSON</button>
+    
+    <input type="file" id="file-input" style="display:none" onchange="handleFile(this)">
+    <input type="file" id="json-input" style="display:none" accept=".json" onchange="handleJson(this)">
+</div>
+
+<div class="main-container">
+    <div id="sidebar">
+        <div id="search-bar">
+            <input type="text" id="search-input" placeholder="Filtrar textos..." oninput="refreshList()">
+        </div>
+        <ul id="text-list"></ul>
+    </div>
+    
+    <div id="editor-area">
+        <div id="entry-label" style="margin-bottom: 10px; font-weight: bold;">Selecione uma entrada</div>
+        <textarea id="text-editor" oninput="updateText()" disabled></textarea>
+        <div class="footer-info">
+            <span id="size-info">Tamanho: 0 bytes</span>
+            <span id="mod-info">Modificado: Não</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    let fileStructure = []; // {type: 'data'|'text', value: Uint8Array|string}
+    let allTexts = [];
+    let originalTexts = [];
+    let currentIndex = -1;
+
+    // --- LOGICA DE SCANNER (Gameloft Style) ---
+    async function handleFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        document.getElementById('file-name').innerText = file.name;
+
+        const buffer = await file.arrayBuffer();
+        const data = new Uint8Array(buffer);
+        
+        fileStructure = [];
+        allTexts = [];
+        let cursor = 0;
+
+        while (cursor < data.length) {
+            let found = false;
+            if (cursor + 2 < data.length) {
+                const len = (data[cursor] << 8) | data[cursor + 1];
+                const start = cursor + 2;
+                const end = start + len;
+
+                if (end <= data.length && len > 0) {
+                    const slice = data.slice(start, end);
+                    const text = new TextDecoder().decode(slice);
+                    
+                    // Validação de caracteres imprimíveis
+                    if (/^[\x20-\xFF\n\r\t]*$/.test(text)) {
+                        fileStructure.push({type: 'text', value: text});
+                        allTexts.push(text);
+                        cursor = end;
+                        found = true;
+                    }
+                }
+            }
+
+            if (!found) {
+                const byte = data[cursor];
+                if (fileStructure.length > 0 && fileStructure[fileStructure.length - 1].type === 'data') {
+                    let prev = fileStructure[fileStructure.length - 1].value;
+                    let newArr = new Uint8Array(prev.length + 1);
+                    newArr.set(prev);
+                    newArr[prev.length] = byte;
+                    fileStructure[fileStructure.length - 1].value = newArr;
+                } else {
+                    fileStructure.push({type: 'data', value: new Uint8Array([byte])});
+                }
+                cursor++;
+            }
+        }
+        originalTexts = [...allTexts];
+        refreshList();
+    }
+
+    // --- UI E RENDERIZAÇÃO ---
+    function refreshList() {
+        const list = document.getElementById('text-list');
+        const filter = document.getElementById('search-input').value.toLowerCase();
+        list.innerHTML = '';
+
+        allTexts.forEach((txt, i) => {
+            if (txt.toLowerCase().includes(filter)) {
+                const li = document.createElement('li');
+                li.className = 'list-item';
+                if (txt !== originalTexts[i]) li.classList.add('modified');
+                if (i === currentIndex) li.classList.add('active');
+                
+                const preview = txt.replace(/[\^\n]/g, ' ').substring(0, 45);
+                li.innerHTML = `${txt !== originalTexts[i] ? '✅ ' : ''}[${i.toString().padStart(3, '0')}] ${preview}`;
+                li.onclick = () => loadText(i);
+                list.appendChild(li);
+            }
+        });
+    }
+
+    function loadText(index) {
+        currentIndex = index;
+        const editor = document.getElementById('text-editor');
+        editor.disabled = false;
+        editor.value = allTexts[index];
+        document.getElementById('entry-label').innerText = `Editando Entrada #${index}`;
+        
+        // Atualiza seleções visuais
+        document.querySelectorAll('.list-item').forEach(el => el.classList.remove('active'));
+        refreshList(); 
+        updateStats();
+    }
+
+    function updateText() {
+        if (currentIndex === -1) return;
+        const newVal = document.getElementById('text-editor').value;
+        allTexts[currentIndex] = newVal;
+        updateStats();
+        
+        // Atualiza o item na lista sem recarregar tudo para não perder o foco
+        const items = document.querySelectorAll('.list-item');
+        refreshList(); 
+    }
+
+    function updateStats() {
+        const txt = allTexts[currentIndex];
+        const bytes = new TextEncoder().encode(txt).length;
+        document.getElementById('size-info').innerText = `Tamanho: ${bytes} bytes`;
+        document.getElementById('mod-info').innerText = `Modificado: ${txt !== originalTexts[currentIndex] ? 'Sim' : 'Não'}`;
+    }
+
+    // --- SALVAMENTO E EXPORTAÇÃO ---
+    function saveBin() {
+        let textIdx = 0;
+        let totalLen = 0;
+        
+        // Calcula tamanho total
+        const parts = fileStructure.map(part => {
+            if (part.type === 'data') return part.value;
+            const b = new TextEncoder().encode(allTexts[textIdx++]);
+            const head = new Uint8Array(2);
+            head[0] = (b.length >> 8) & 0xFF;
+            head[1] = b.length & 0xFF;
+            const res = new Uint8Array(2 + b.length);
+            res.set(head);
+            res.set(b, 2);
+            return res;
+        });
+
+        const blob = new Blob(parts, {type: "application/octet-stream"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = "MOD_WEB_FILE.bin";
+        link.click();
+    }
+
+    function exportJson() {
+        const data = JSON.stringify(allTexts, null, 4);
+        const blob = new Blob([data], {type: "application/json"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = "traducao.json";
+        link.click();
+    }
+
+    async function handleJson(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const text = await file.text();
+        allTexts = JSON.parse(text);
+        refreshList();
+        alert("JSON Importado!");
+    }
+
+    function showCredits() {
+        alert("Lang2ME v1.0\n\nCriado por Quakeman.\nCom suporte para muitos jogos");
+    }
+</script>
+</body>
+</html>
