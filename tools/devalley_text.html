@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devalley Text Editor - Web</title>
+    <style>
+        :root {
+            --primary: #0078D7;
+            --success: #28a745;
+            --bg: #f4f7f9;
+            --text: #333;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--text); }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        
+        /* Toolbar e Pesquisa */
+        .header-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; }
+        .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+        .search-box { position: relative; flex-grow: 1; max-width: 400px; }
+        .search-box input { width: 100%; padding: 10px 15px; border: 2px solid #e1e1e1; border-radius: 6px; outline: none; transition: 0.3s; box-sizing: border-box; }
+        .search-box input:focus { border-color: var(--primary); }
+
+        button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: flex; align-items: center; gap: 6px; font-size: 14px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-secondary { background: #eee; color: #555; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button:hover:not(:disabled) { filter: brightness(92%); transform: translateY(-1px); }
+
+        .info-panel { background: #f8fbff; border: 1px solid #d0e3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 13px; }
+        
+        /* Tabela */
+        .table-container { max-height: 60vh; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { position: sticky; top: 0; background: #f8f8f8; padding: 12px; text-align: left; border-bottom: 2px solid #eee; z-index: 1; }
+        td { padding: 12px; border-bottom: 1px solid #f1f1f1; font-family: 'Consolas', monospace; font-size: 13px; }
+        tr:hover { background: #fafafa; }
+        .modified { background: #fff5f5 !important; border-left: 4px solid #d9534f; }
+        .hidden-row { display: none; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 700px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        textarea { width: 100%; height: 250px; margin: 15px 0; font-family: 'Consolas', monospace; padding: 15px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-actions">
+        <div class="toolbar">
+            <button class="btn-primary" onclick="document.getElementById('fileInput').click()">📂 Abrir</button>
+            <button id="btnSave" class="btn-primary" onclick="saveFile()" disabled>💾 Salvar</button>
+            <button id="btnExport" class="btn-secondary" onclick="exportJSON()" disabled>📤 Exportar</button>
+            <button id="btnImport" class="btn-secondary" onclick="document.getElementById('jsonInput').click()" disabled>📥 Importar</button>
+            <button class="btn-secondary" onclick="location.reload()">🧹 Limpar</button>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Procurar texto..." onkeyup="filterTable()" disabled>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" style="display:none" onchange="loadFile(this)">
+    <input type="file" id="jsonInput" style="display:none" accept=".json" onchange="importJSON(this)">
+
+    <div id="infoPanel" class="info-panel" style="visibility: hidden;">
+        <div id="fileStats">Arquivo: -</div>
+        <div id="headerStats">Blocos: -</div>
+        <div id="newSizeStats">Tamanho: -</div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">ID</th>
+                    <th style="width: 150px;">Offset</th>
+                    <th>Conteúdo</th>
+                    <th style="width: 60px;">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle" style="margin-top:0">Editar Tradução</h3>
+        <textarea id="editText"></textarea>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn-secondary" onclick="closeModal()">Voltar</button>
+            <button class="btn-primary" onclick="confirmEdit()">Aplicar Mudanças</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let fileData = null;
+    let textBlocks = [];
+    let metadataBlock = null;
+    let actualHeaderSize = 0;
+    let editingIndex = null;
+
+    // Decodificador manual para ISO-8859-1 (Latin1)
+    function decodeLatin1(uint8array) {
+        let str = "";
+        for (let i = 0; i < uint8array.length; i++) {
+            str += String.fromCharCode(uint8array[i]);
+        }
+        return str;
+    }
+
+    // Encodificador manual para ISO-8859-1
+    function encodeLatin1(str) {
+        let arr = new Uint8Array(str.length);
+        for (let i = 0; i < str.length; i++) {
+            arr[i] = str.charCodeAt(i) & 0xFF;
+        }
+        return arr;
+    }
+
+    async function loadFile(input) {
+        if (!input.files[0]) return;
+        const buffer = await input.files[0].arrayBuffer();
+        fileData = new Uint8Array(buffer);
+        
+        document.getElementById('infoPanel').style.visibility = 'visible';
+        document.getElementById('fileStats').innerText = `Arquivo: ${input.files[0].name} (${fileData.length} bytes)`;
+        
+        parseFile();
+    }
+
+    function parseFile() {
+        const view = new DataView(fileData.buffer);
+        try {
+            const offsetCount = view.getUint32(0, true);
+            const offsets = [];
+            for (let i = 0; i <= offsetCount; i++) {
+                offsets.push(view.getUint32(4 + i * 4, true));
+            }
+
+            actualHeaderSize = offsets[0];
+            metadataBlock = fileData.slice(offsets[0], offsets[1]);
+            textBlocks = [];
+            
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            for (let i = 1; i < offsets.length - 1; i++) {
+                let s = offsets[i];
+                let e = offsets[i + 1];
+                let text = "";
+
+                if (s < fileData.length) {
+                    let tStart = s + 1;
+                    let tEnd = e - 1;
+                    // Limpar bytes nulos no final
+                    while (tEnd > tStart && fileData[tEnd - 1] === 0) tEnd--;
+                    
+                    if (tEnd > tStart) {
+                        text = decodeLatin1(fileData.slice(tStart, tEnd));
+                    }
+                }
+
+                const block = { index: i - 1, text, start: s, end: e, isModified: false };
+                textBlocks.push(block);
+                renderRow(block);
+            }
+
+            document.getElementById('headerStats').innerText = `Blocos: ${textBlocks.length} | Metadata: ${metadataBlock.length} bytes`;
+            document.getElementById('btnSave').disabled = false;
+            document.getElementById('btnExport').disabled = false;
+            document.getElementById('btnImport').disabled = false;
+            document.getElementById('searchInput').disabled = false;
+            updateNewSize();
+        } catch(e) {
+            alert("Erro ao ler binário. Verifique o formato.");
+        }
+    }
+
+    function renderRow(block) {
+        const row = document.createElement('tr');
+        row.id = `row-${block.index}`;
+        row.innerHTML = `
+            <td style="color: #888">${block.index}</td>
+            <td>0x${block.start.toString(16).toUpperCase()}</td>
+            <td class="preview-cell">${escapeHtml(block.text.substring(0, 100))}</td>
+            <td><button class="btn-secondary" onclick="openModal(${block.index})">📝</button></td>
+        `;
+        document.getElementById('tableBody').appendChild(row);
+    }
+
+    function filterTable() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        textBlocks.forEach(block => {
+            const row = document.getElementById(`row-${block.index}`);
+            const match = block.text.toLowerCase().includes(query);
+            row.className = match ? (block.isModified ? 'modified' : '') : 'hidden-row';
+        });
+    }
+
+    function openModal(index) {
+        editingIndex = index;
+        document.getElementById('editText').value = textBlocks[index].text;
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('editModal').style.display = 'none'; }
+
+    function confirmEdit() {
+        const newText = document.getElementById('editText').value;
+        if (newText !== textBlocks[editingIndex].text) {
+            textBlocks[editingIndex].text = newText;
+            textBlocks[editingIndex].isModified = true;
+            const row = document.getElementById(`row-${editingIndex}`);
+            row.classList.add('modified');
+            row.querySelector('.preview-cell').innerText = newText.substring(0, 100);
+            updateNewSize();
+        }
+        closeModal();
+    }
+
+    function updateNewSize() {
+        let newSize = actualHeaderSize + metadataBlock.length;
+        textBlocks.forEach(b => {
+            const textBytes = encodeLatin1(b.text);
+            const blockSize = 1 + textBytes.length + 1;
+            const pad = (4 - (blockSize % 4)) % 4;
+            newSize += blockSize + pad;
+        });
+        const diff = newSize - fileData.length;
+        document.getElementById('newSizeStats').innerText = `Tamanho Final: ${newSize} bytes (${diff >= 0 ? '+' : ''}${diff})`;
+    }
+
+    function saveFile() {
+        let current = actualHeaderSize + metadataBlock.length;
+        const newOffsets = [actualHeaderSize, current];
+        const bodyParts = [];
+
+        textBlocks.forEach((block, i) => {
+            if (i > 0) newOffsets.push(current);
+            const textBytes = encodeLatin1(block.text);
+            const size = 1 + textBytes.length + 1;
+            const padSize = (4 - (size % 4)) % 4;
+            
+            const part = new Uint8Array(size + padSize);
+            part[0] = 0; 
+            part.set(textBytes, 1);
+            part[1 + textBytes.length] = 0; 
+            // padding já é zero por padrão no Uint8Array
+            
+            bodyParts.push(part);
+            current += (size + padSize);
+        });
+        newOffsets.push(current);
+
+        const finalBuffer = new Uint8Array(4 + (newOffsets.length * 4) + metadataBlock.length + (current - (actualHeaderSize + metadataBlock.length)));
+        const view = new DataView(finalBuffer.buffer);
+        
+        view.setUint32(0, textBlocks.length + 1, true);
+        newOffsets.forEach((off, i) => view.setUint32(4 + i * 4, off, true));
+        
+        finalBuffer.set(metadataBlock, 4 + (newOffsets.length * 4));
+        
+        let pos = 4 + (newOffsets.length * 4) + metadataBlock.length;
+        bodyParts.forEach(part => {
+            finalBuffer.set(part, pos);
+            pos += part.length;
+        });
+
+        const blob = new Blob([finalBuffer], { type: 'application/octet-stream' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "output_text.bin";
+        a.click();
+    }
+
+    function exportJSON() {
+        const data = {};
+        textBlocks.forEach(b => data[b.index] = b.text);
+        const blob = new Blob([JSON.stringify(data, null, 4)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "traducao.json";
+        a.click();
+    }
+
+    async function importJSON(input) {
+        if (!input.files[0]) return;
+        const json = JSON.parse(await input.files[0].text());
+        let count = 0;
+        textBlocks.forEach((block, i) => {
+            if (json[i] !== undefined && json[i] !== block.text) {
+                block.text = json[i];
+                block.isModified = true;
+                const row = document.getElementById(`row-${i}`);
+                row.classList.add('modified');
+                row.querySelector('.preview-cell').innerText = block.text.substring(0, 100);
+                count++;
+            }
+        });
+        updateNewSize();
+        alert(count + " blocos importados!");
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+
+</body>
+</html>
