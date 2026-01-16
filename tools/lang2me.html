@@ -2,122 +2,128 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Lang2ME 1.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lang2ME 1.3 - Web Version</title>
     <style>
         :root {
-            --bg: #f5f6fa;
-            --sidebar: #ffffff;
-            --accent: #27ae60;
-            --text: #2f3640;
+            --bg-color: #f0f2f5;
+            --panel-bg: #ffffff;
+            --accent: #0078d4;
+            --border: #ccc;
+            --modified-color: #d4edda;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg); color: var(--text); }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); margin: 0; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Header & Toolbar */
-        header { background: #2f3640; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .toolbar { background: #dcdde1; padding: 8px 20px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #bcbcbc; }
-        
+        /* Navbar */
+        .navbar { background: #333; color: white; padding: 10px 20px; display: flex; gap: 15px; align-items: center; }
+        .navbar button { background: #444; color: white; border: 1px solid #666; padding: 5px 12px; cursor: pointer; border-radius: 4px; }
+        .navbar button:hover { background: #555; }
+
+        /* Toolbar */
+        .toolbar { padding: 10px 20px; background: #eee; border-bottom: 1px solid var(--border); display: flex; gap: 20px; align-items: center; }
+        .toolbar input, .toolbar select { padding: 5px; border-radius: 4px; border: 1px solid var(--border); }
+
         /* Main Layout */
         .main-container { display: flex; flex: 1; overflow: hidden; }
         
-        /* Sidebar */
-        #sidebar { width: 350px; background: var(--sidebar); border-right: 1px solid #dcdde1; display: flex; flex-direction: column; }
-        #search-bar { padding: 10px; border-bottom: 1px solid #eee; }
-        #search-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        #text-list { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 0; }
-        .list-item { padding: 10px; border-bottom: 1px solid #f1f1f1; cursor: pointer; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .list-item:hover { background: #f9f9f9; }
-        .list-item.active { background: #e1f5fe; border-left: 4px solid #0288d1; }
-        .list-item.modified { background: #d4edda !important; color: #155724; }
+        #list-container { width: 350px; border-right: 1px solid var(--border); background: var(--panel-bg); display: flex; flex-direction: column; }
+        #entry-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+        #entry-list li { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9em; }
+        #entry-list li:hover { background: #f0f0f0; }
+        #entry-list li.selected { background: var(--accent) !important; color: white; }
+        #entry-list li.modified { background: var(--modified-color); }
 
-        /* Editor Area */
-        #editor-area { flex: 1; display: flex; flex-direction: column; padding: 20px; background: white; }
-        #text-editor { flex: 1; font-family: 'Consolas', monospace; font-size: 18px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; resize: none; outline: none; }
-        #text-editor:focus { border-color: var(--accent); }
+        #editor-container { flex: 1; display: flex; flex-direction: column; padding: 20px; background: var(--panel-bg); }
+        #text-editor { flex: 1; width: 100%; font-family: 'Consolas', monospace; font-size: 16px; padding: 15px; border: 1px solid var(--border); resize: none; box-sizing: border-box; }
         
-        .footer-info { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #7f8c8d; }
+        .footer-info { display: flex; justify-content: space-between; padding: 10px 0; color: #666; font-size: 0.85em; }
         
-        button { padding: 6px 12px; cursor: pointer; border: 1px solid #999; background: #fff; border-radius: 3px; font-size: 13px; }
-        button:hover { background: #eee; }
-        .btn-primary { background: var(--accent); color: white; border: none; font-weight: bold; }
-        .btn-primary:hover { background: #219150; }
+        hidden-input { display: none; }
     </style>
 </head>
 <body>
 
-<header>
-    <div style="font-weight: bold; font-size: 18px;">Lang2ME</div>
-    <div id="file-name">Nenhum arquivo carregado</div>
-    <div>
-        <select id="lang-select">
-            <option value="PT">Português</option>
-            <option value="EN">English</option>
-        </select>
-        <button onclick="showCredits()">?</button>
-    </div>
-</header>
+<div class="navbar">
+    <strong>Lang2ME 1.3</strong>
+    <button onclick="document.getElementById('fileInput').click()">Abrir Binário</button>
+    <button onclick="saveBinary()">Salvar Binário</button>
+    <button onclick="document.getElementById('jsonInput').click()">Importar JSON</button>
+    <button onclick="exportJSON()">Exportar JSON</button>
+    <input type="file" id="fileInput" style="display:none" onchange="autoScanFile(this)">
+    <input type="file" id="jsonInput" style="display:none" accept=".json" onchange="importJSON(this)">
+</div>
 
 <div class="toolbar">
-    <button class="btn-primary" onclick="document.getElementById('file-input').click()">Abrir Arquivo</button>
-    <button onclick="saveBin()">Salvar Binário</button>
-    <span style="color: #999;">|</span>
-    <button onclick="document.getElementById('json-input').click()">Importar JSON</button>
-    <button onclick="exportJson()">Exportar JSON</button>
-    
-    <input type="file" id="file-input" style="display:none" onchange="handleFile(this)">
-    <input type="file" id="json-input" style="display:none" accept=".json" onchange="handleJson(this)">
+    <div>
+        <label>🔍 Localizar:</label>
+        <input type="text" id="searchInput" placeholder="Filtrar textos..." oninput="refreshList()">
+    </div>
+    <div>
+        <label>Byte Order:</label>
+        <select id="endianCombo" onchange="alert('Ordem alterada. Re-abra o arquivo para processar corretamente.')">
+            <option value="BE">Big Endian (00 04)</option>
+            <option value="LE">Little Endian (04 00)</option>
+        </select>
+    </div>
+    <div>
+        <label>Encoding:</label>
+        <select id="encodingCombo">
+            <option value="utf-8">UTF-8</option>
+            <option value="iso-8859-1">ISO-8859-1</option>
+        </select>
+    </div>
 </div>
 
 <div class="main-container">
-    <div id="sidebar">
-        <div id="search-bar">
-            <input type="text" id="search-input" placeholder="Filtrar textos..." oninput="refreshList()">
-        </div>
-        <ul id="text-list"></ul>
+    <div id="list-container">
+        <ul id="entry-list"></ul>
     </div>
-    
-    <div id="editor-area">
-        <div id="entry-label" style="margin-bottom: 10px; font-weight: bold;">Selecione uma entrada</div>
-        <textarea id="text-editor" oninput="updateText()" disabled></textarea>
+    <div id="editor-container">
+        <div id="status-label">Aguardando arquivo...</div>
+        <textarea id="text-editor" oninput="updateInMemory()"></textarea>
         <div class="footer-info">
-            <span id="size-info">Tamanho: 0 bytes</span>
-            <span id="mod-info">Modificado: Não</span>
+            <span id="size-label">Tamanho: 0 bytes</span>
+            <span id="modified-label">Modificado: Não</span>
         </div>
     </div>
 </div>
 
 <script>
-    let fileStructure = []; // {type: 'data'|'text', value: Uint8Array|string}
+    let fileStructure = []; // Estrutura: {type: 'data'|'text', value: Uint8Array|String}
     let allTexts = [];
     let originalTexts = [];
-    let currentIndex = -1;
+    let selectedIndex = -1;
 
-    // --- LOGICA DE SCANNER (Gameloft Style) ---
-    async function handleFile(input) {
-        const file = input.files[0];
-        if (!file) return;
-        document.getElementById('file-name').innerText = file.name;
-
-        const buffer = await file.arrayBuffer();
+    // --- Lógica de Escaneamento ---
+    async function autoScanFile(input) {
+        if (!input.files[0]) return;
+        const buffer = await input.files[0].arrayBuffer();
         const data = new Uint8Array(buffer);
-        
+        const endian = document.getElementById('endianCombo').value;
+        const encoding = document.getElementById('encodingCombo').value;
+
         fileStructure = [];
         allTexts = [];
         let cursor = 0;
 
         while (cursor < data.length) {
             let found = false;
-            if (cursor + 2 < data.length) {
-                const len = (data[cursor] << 8) | data[cursor + 1];
-                const start = cursor + 2;
-                const end = start + len;
 
-                if (end <= data.length && len > 0) {
-                    const slice = data.slice(start, end);
-                    const text = new TextDecoder().decode(slice);
+            if (cursor + 2 <= data.length) {
+                // Lê o tamanho (Uint16) baseado no Endianness
+                const view = new DataView(data.buffer, cursor, 2);
+                const length = (endian === "BE") ? view.getUint16(0, false) : view.getUint16(0, true);
+                
+                const start = cursor + 2;
+                const end = start + length;
+
+                if (end <= data.length && length > 0) {
+                    const potentialBytes = data.slice(start, end);
+                    const text = new TextDecoder(encoding).decode(potentialBytes);
                     
-                    // Validação de caracteres imprimíveis
-                    if (/^[\x20-\xFF\n\r\t]*$/.test(text)) {
-                        fileStructure.push({type: 'text', value: text});
+                    if (isPrintable(text)) {
+                        fileStructure.push({ type: 'text', value: text });
                         allTexts.push(text);
                         cursor = end;
                         found = true;
@@ -128,119 +134,132 @@
             if (!found) {
                 const byte = data[cursor];
                 if (fileStructure.length > 0 && fileStructure[fileStructure.length - 1].type === 'data') {
-                    let prev = fileStructure[fileStructure.length - 1].value;
-                    let newArr = new Uint8Array(prev.length + 1);
-                    newArr.set(prev);
-                    newArr[prev.length] = byte;
+                    // Mescla bytes consecutivos para performance
+                    let last = fileStructure[fileStructure.length - 1].value;
+                    let newArr = new Uint8Array(last.length + 1);
+                    newArr.set(last);
+                    newArr[last.length] = byte;
                     fileStructure[fileStructure.length - 1].value = newArr;
                 } else {
-                    fileStructure.push({type: 'data', value: new Uint8Array([byte])});
+                    fileStructure.push({ type: 'data', value: new Uint8Array([byte]) });
                 }
                 cursor++;
             }
         }
+
         originalTexts = [...allTexts];
+        document.getElementById('status-label').innerText = `Entradas: ${allTexts.length}`;
         refreshList();
     }
 
-    // --- UI E RENDERIZAÇÃO ---
-    function refreshList() {
-        const list = document.getElementById('text-list');
-        const filter = document.getElementById('search-input').value.toLowerCase();
-        list.innerHTML = '';
+    function isPrintable(str) {
+        // Lógica similar ao Python: verifica se não é lixo binário
+        return /^[\x20-\xFF\n\r\t]*$/.test(str);
+    }
 
-        allTexts.forEach((txt, i) => {
-            if (txt.toLowerCase().includes(filter)) {
-                const li = document.createElement('li');
-                li.className = 'list-item';
-                if (txt !== originalTexts[i]) li.classList.add('modified');
-                if (i === currentIndex) li.classList.add('active');
-                
-                const preview = txt.replace(/[\^\n]/g, ' ').substring(0, 45);
-                li.innerHTML = `${txt !== originalTexts[i] ? '✅ ' : ''}[${i.toString().padStart(3, '0')}] ${preview}`;
-                li.onclick = () => loadText(i);
-                list.appendChild(li);
+    // --- UI e Lista ---
+    function refreshList() {
+        const list = document.getElementById('entry-list');
+        const filter = document.getElementById('searchInput').value.toLowerCase();
+        list.innerHTML = "";
+
+        let textIdx = 0;
+        fileStructure.forEach((item) => {
+            if (item.type === 'text') {
+                const currentIdx = textIdx;
+                const textValue = allTexts[currentIdx];
+
+                if (textValue.toLowerCase().includes(filter)) {
+                    const li = document.createElement('li');
+                    li.textContent = `[${currentIdx.toString().padStart(3, '0')}] ${textValue.substring(0, 50).replace(/\n/g, ' ')}`;
+                    
+                    if (textValue !== originalTexts[currentIdx]) li.classList.add('modified');
+                    if (currentIdx === selectedIndex) li.classList.add('selected');
+
+                    li.onclick = () => loadText(currentIdx);
+                    list.appendChild(li);
+                }
+                textIdx++;
             }
         });
     }
 
-    function loadText(index) {
-        currentIndex = index;
+    function loadText(idx) {
+        selectedIndex = idx;
         const editor = document.getElementById('text-editor');
-        editor.disabled = false;
-        editor.value = allTexts[index];
-        document.getElementById('entry-label').innerText = `Editando Entrada #${index}`;
+        editor.value = allTexts[idx];
         
-        // Atualiza seleções visuais
-        document.querySelectorAll('.list-item').forEach(el => el.classList.remove('active'));
-        refreshList(); 
-        updateStats();
+        document.querySelectorAll('#entry-list li').forEach(el => el.classList.remove('selected'));
+        // Re-selecionar visualmente na lista filtrada se necessário
+        refreshList();
+        updateByteInfo();
     }
 
-    function updateText() {
-        if (currentIndex === -1) return;
-        const newVal = document.getElementById('text-editor').value;
-        allTexts[currentIndex] = newVal;
-        updateStats();
-        
-        // Atualiza o item na lista sem recarregar tudo para não perder o foco
-        const items = document.querySelectorAll('.list-item');
-        refreshList(); 
+    function updateInMemory() {
+        if (selectedIndex === -1) return;
+        allTexts[selectedIndex] = document.getElementById('text-editor').value;
+        updateByteInfo();
+        document.getElementById('modified-label').innerText = "Modificado: Sim";
     }
 
-    function updateStats() {
-        const txt = allTexts[currentIndex];
-        const bytes = new TextEncoder().encode(txt).length;
-        document.getElementById('size-info').innerText = `Tamanho: ${bytes} bytes`;
-        document.getElementById('mod-info').innerText = `Modificado: ${txt !== originalTexts[currentIndex] ? 'Sim' : 'Não'}`;
+    function updateByteInfo() {
+        const encoding = document.getElementById('encodingCombo').value;
+        const bytes = new TextEncoder().encode(allTexts[selectedIndex]);
+        document.getElementById('size-label').innerText = `Tamanho: ${bytes.length} bytes`;
     }
 
-    // --- SALVAMENTO E EXPORTAÇÃO ---
-    function saveBin() {
-        let textIdx = 0;
-        let totalLen = 0;
-        
-        // Calcula tamanho total
-        const parts = fileStructure.map(part => {
-            if (part.type === 'data') return part.value;
-            const b = new TextEncoder().encode(allTexts[textIdx++]);
-            const head = new Uint8Array(2);
-            head[0] = (b.length >> 8) & 0xFF;
-            head[1] = b.length & 0xFF;
-            const res = new Uint8Array(2 + b.length);
-            res.set(head);
-            res.set(b, 2);
-            return res;
+    // --- Exportação ---
+    async function saveBinary() {
+        if (fileStructure.length === 0) return;
+
+        const endian = document.getElementById('endianCombo').value;
+        const encoding = document.getElementById('encodingCombo').value;
+        const chunks = [];
+        let textCounter = 0;
+
+        fileStructure.forEach(item => {
+            if (item.type === 'data') {
+                chunks.push(item.value);
+            } else {
+                const textBytes = new TextEncoder(encoding).encode(allTexts[textCounter]);
+                const header = new ArrayBuffer(2);
+                const view = new DataView(header);
+                
+                // Grava o tamanho no endian correto
+                if (endian === "BE") view.setUint16(0, textBytes.length, false);
+                else view.setUint16(0, textBytes.length, true);
+                
+                chunks.push(new Uint8Array(header));
+                chunks.push(textBytes);
+                textCounter++;
+            }
         });
 
-        const blob = new Blob(parts, {type: "application/octet-stream"});
+        const blob = new Blob(chunks, { type: "application/octet-stream" });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = "MOD_WEB_FILE.bin";
+        link.download = "MODIFIED.bin";
         link.click();
     }
 
-    function exportJson() {
-        const data = JSON.stringify(allTexts, null, 4);
-        const blob = new Blob([data], {type: "application/json"});
+    function exportJSON() {
+        const blob = new Blob([JSON.stringify(allTexts, null, 4)], { type: "application/json" });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = "traducao.json";
+        link.download = "export.json";
         link.click();
     }
 
-    async function handleJson(input) {
-        const file = input.files[0];
-        if (!file) return;
-        const text = await file.text();
-        allTexts = JSON.parse(text);
-        refreshList();
-        alert("JSON Importado!");
-    }
-
-    function showCredits() {
-        alert("Lang2ME v1.0\n\nCriado por Quakeman.\nCom suporte para muitos jogos");
+    function importJSON(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            allTexts = JSON.parse(e.target.result);
+            refreshList();
+            alert("JSON importado com sucesso!");
+        };
+        reader.readAsText(input.files[0]);
     }
 </script>
+
 </body>
 </html>
