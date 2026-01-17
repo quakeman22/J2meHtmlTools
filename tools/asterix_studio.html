@@ -303,9 +303,10 @@
         }
 
         function parseFile(data) {
-            const prof = gameProfiles[currentProfile];
-            fixedHeader = data.slice(0, 4);
-            blocks = [];
+    const prof = gameProfiles[currentProfile];
+    fixedHeader = data.slice(0, prof.headerEnd); 
+    blocks = [];
+
             elements.blockTree.innerHTML = '';
 
             const pointers = [];
@@ -434,53 +435,73 @@
         }
 
         function saveFile() {
-            autoSaveText();
-            const prof = gameProfiles[currentProfile];
-            
-            const pool = [];
-            const ptrs = [];
-            let curr = prof.headerEnd;
+    autoSaveText();
+    const prof = gameProfiles[currentProfile];
+    
+    const preparedBlocks = [];
+    const ptrs = [];
+    let currentOffset = prof.headerEnd;
 
-            blocks.forEach(b => {
-                ptrs.push(curr);
-                let final;
-                
-                if (b.type === 'SISTEMA' || b.type === 'QYP6') {
-                    final = b.content;
-                } else if (b.type === 'PNG') {
-                    const size = new Uint8Array(4);
-                    new DataView(size.buffer).setUint32(0, b.content.length, false);
-                    final = new Uint8Array([...size, ...b.content]);
-                } else {
-                    const size = new Uint8Array(2);
-                    new DataView(size.buffer).setUint16(0, b.content.length, false);
-                    final = new Uint8Array([...size, ...b.content]);
-                }
-                
-                pool.push(...final);
-                curr += final.length;
-            });
-
-            const output = new Uint8Array(prof.headerEnd + pool.length);
-            output.set(fixedHeader, 0);
-            
-            ptrs.forEach((ptr, i) => {
-                const view = new DataView(output.buffer);
-                view.setUint32(4 + i * 4, ptr, false);
-            });
-
-            output.set(pool, prof.headerEnd);
-
-            const blob = new Blob([output], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'asterix_modificado.bin';
-            a.click();
-            URL.revokeObjectURL(url);
-
-            alert('Binário reconstruído com sucesso!');
+    // 1. Preparar os blocos e calcular novos ponteiros
+    blocks.forEach(b => {
+        ptrs.push(currentOffset);
+        let finalBlock;
+        
+        if (b.type === 'SISTEMA' || b.type === 'QYP6') {
+            finalBlock = b.content;
+        } else if (b.type === 'PNG') {
+            // Adiciona 4 bytes de tamanho (BE) antes do PNG
+            finalBlock = new Uint8Array(4 + b.content.length);
+            const view = new DataView(finalBlock.buffer);
+            view.setUint32(0, b.content.length, false);
+            finalBlock.set(b.content, 4);
+        } else {
+            // Adiciona 2 bytes de tamanho (BE) antes do Texto
+            finalBlock = new Uint8Array(2 + b.content.length);
+            const view = new DataView(finalBlock.buffer);
+            view.setUint16(0, b.content.length, false);
+            finalBlock.set(b.content, 2);
         }
+        
+        preparedBlocks.push(finalBlock);
+        currentOffset += finalBlock.length;
+    });
+
+    // 2. Criar o buffer de saída com o tamanho exato
+    const totalSize = currentOffset;
+    const output = new Uint8Array(totalSize);
+
+    // 3. Inserir o cabeçalho original (preserva dados de sistema entre ponteiros)
+    output.set(fixedHeader, 0);
+
+    // 4. Atualizar apenas a tabela de ponteiros dentro do cabeçalho
+    const outputView = new DataView(output.buffer);
+    ptrs.forEach((ptr, i) => {
+        const offsetNaTabela = 4 + (i * 4);
+        if (offsetNaTabela + 4 <= prof.headerEnd) {
+            outputView.setUint32(offsetNaTabela, ptr, false);
+        }
+    });
+
+    // 5. Inserir os blocos de dados após o cabeçalho
+    let writeOffset = prof.headerEnd;
+    preparedBlocks.forEach(block => {
+        output.set(block, writeOffset);
+        writeOffset += block.length;
+    });
+
+    // 6. Download
+    const blob = new Blob([output], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'asterix_modificado.bin';
+    a.click();
+    URL.revokeObjectURL(url);
+
+    alert('Binário reconstruído com sucesso sem bytes extras!');
+}
+
     </script>
 </body>
 </html>
