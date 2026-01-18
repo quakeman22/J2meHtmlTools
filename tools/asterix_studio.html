@@ -10,14 +10,12 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #121212;
             color: #d4d4d4;
             padding: 20px;
         }
-
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -25,7 +23,6 @@
             gap: 20px;
             height: calc(100vh - 40px);
         }
-
         .sidebar {
             width: 350px;
             background-color: #1e1e1e;
@@ -35,7 +32,6 @@
             flex-direction: column;
             gap: 15px;
         }
-
         .main-panel {
             flex: 1;
             background-color: #1e1e1e;
@@ -45,13 +41,11 @@
             flex-direction: column;
             gap: 15px;
         }
-
         h1 {
             color: #569cd6;
             font-size: 24px;
             margin-bottom: 10px;
         }
-
         label {
             color: #aaaaaa;
             font-size: 12px;
@@ -59,7 +53,6 @@
             display: block;
             margin-bottom: 5px;
         }
-
         select, button, input[type="file"] {
             width: 100%;
             padding: 10px;
@@ -70,24 +63,19 @@
             font-size: 14px;
             cursor: pointer;
         }
-
         button {
             font-weight: bold;
             transition: background-color 0.2s;
         }
-
         button:hover {
             background-color: #444;
         }
-
         button.primary {
             background-color: #0e639c;
         }
-
         button.primary:hover {
             background-color: #1177bb;
         }
-
         .tree {
             flex: 1;
             background-color: #252525;
@@ -96,7 +84,6 @@
             overflow-y: auto;
             padding: 10px;
         }
-
         .tree-item {
             padding: 8px 12px;
             margin: 2px 0;
@@ -106,16 +93,13 @@
             justify-content: space-between;
             transition: background-color 0.2s;
         }
-
         .tree-item:hover {
             background-color: #333;
         }
-
         .tree-item.selected {
             background-color: #007acc;
             color: white;
         }
-
         .status {
             font-weight: bold;
             color: #569cd6;
@@ -125,14 +109,12 @@
             border-radius: 4px;
             text-align: center;
         }
-
         .editor-area {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
-
         textarea {
             flex: 1;
             background-color: #1e1e1e;
@@ -144,7 +126,6 @@
             font-size: 14px;
             resize: none;
         }
-
         .image-viewer {
             flex: 1;
             display: flex;
@@ -154,26 +135,21 @@
             border-radius: 5px;
             padding: 20px;
         }
-
         .image-viewer img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
-
         .button-group {
             display: flex;
             gap: 10px;
         }
-
         .hidden {
             display: none !important;
         }
-
         input[type="file"] {
             display: none;
         }
-
         .file-label {
             display: block;
             padding: 10px;
@@ -185,7 +161,6 @@
             cursor: pointer;
             font-weight: bold;
         }
-
         .file-label:hover {
             background-color: #444;
         }
@@ -195,7 +170,6 @@
     <div class="container">
         <div class="sidebar">
             <h1>🎮 Asterix Studio</h1>
-            
             <div>
                 <label>PERFIL DO JOGO:</label>
                 <select id="gameProfile">
@@ -203,25 +177,19 @@
                     <option value="obelix">Asterix Resgata Obelix</option>
                 </select>
             </div>
-
             <div>
                 <input type="file" id="fileInput" accept="*">
                 <label for="fileInput" class="file-label">📂 Abrir Arquivo</label>
             </div>
-
             <div class="tree" id="blockTree"></div>
-
             <button class="primary" id="saveBtn">💾 Salvar Binário Final</button>
         </div>
-
         <div class="main-panel">
             <div class="status" id="status">AGUARDANDO ARQUIVO</div>
-
             <div class="button-group hidden" id="imageButtons">
                 <button id="replaceImgBtn">🖼️ Substituir</button>
                 <button id="exportImgBtn">💾 Exportar PNG</button>
             </div>
-
             <div class="editor-area">
                 <textarea id="textEditor" class="hidden" placeholder="Editor de texto..."></textarea>
                 <div class="image-viewer hidden" id="imageViewer">
@@ -303,10 +271,9 @@
         }
 
         function parseFile(data) {
-    const prof = gameProfiles[currentProfile];
-    fixedHeader = data.slice(0, prof.headerEnd); 
-    blocks = [];
-
+            const prof = gameProfiles[currentProfile];
+            fixedHeader = data.slice(0, prof.headerEnd);
+            blocks = [];
             elements.blockTree.innerHTML = '';
 
             const pointers = [];
@@ -326,14 +293,12 @@
                 if (start >= prof.protecaoInicio && start <= prof.protecaoFim) {
                     type = 'SISTEMA';
                 } else {
-                    // Verifica se tem 4 bytes de tamanho seguido de PNG
                     if (raw.length > 12 && isPNG(raw.slice(4))) {
                         type = 'PNG';
                         content = raw.slice(4);
                     } else if (hasSequence(raw.slice(0, 12), [0x51, 0x59, 0x50, 0x36])) {
                         type = 'QYP6';
                     } else if (raw.length > 2) {
-                        // Assume TXT se não for nenhum dos anteriores
                         type = 'TXT';
                         content = raw.slice(2);
                     } else {
@@ -356,7 +321,6 @@
         }
 
         function isPNG(data) {
-            // PNG signature: 89 50 4E 47 0D 0A 1A 0A
             const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
             if (data.length < 8) return false;
             for (let i = 0; i < 8; i++) {
@@ -366,7 +330,7 @@
         }
 
         function readUInt32BE(data, offset) {
-            return (data[offset] << 24) | (data[offset + 1] << 16) | 
+            return (data[offset] << 24) | (data[offset + 1] << 16) |
                    (data[offset + 2] << 8) | data[offset + 3];
         }
 
@@ -435,73 +399,73 @@
         }
 
         function saveFile() {
-    autoSaveText();
-    const prof = gameProfiles[currentProfile];
-    
-    const preparedBlocks = [];
-    const ptrs = [];
-    let currentOffset = prof.headerEnd;
+            autoSaveText();
+            const prof = gameProfiles[currentProfile];
+            
+            const preparedBlocks = [];
+            const ptrs = [];
+            let currentOffset = prof.headerEnd;
 
-    // 1. Preparar os blocos e calcular novos ponteiros
-    blocks.forEach(b => {
-        ptrs.push(currentOffset);
-        let finalBlock;
-        
-        if (b.type === 'SISTEMA' || b.type === 'QYP6') {
-            finalBlock = b.content;
-        } else if (b.type === 'PNG') {
-            // Adiciona 4 bytes de tamanho (BE) antes do PNG
-            finalBlock = new Uint8Array(4 + b.content.length);
-            const view = new DataView(finalBlock.buffer);
-            view.setUint32(0, b.content.length, false);
-            finalBlock.set(b.content, 4);
-        } else {
-            // Adiciona 2 bytes de tamanho (BE) antes do Texto
-            finalBlock = new Uint8Array(2 + b.content.length);
-            const view = new DataView(finalBlock.buffer);
-            view.setUint16(0, b.content.length, false);
-            finalBlock.set(b.content, 2);
+            // Preparar os blocos e calcular novos ponteiros
+            blocks.forEach(b => {
+                ptrs.push(currentOffset);
+                let finalBlock;
+                
+                if (b.type === 'SISTEMA' || b.type === 'QYP6') {
+                    finalBlock = b.content;
+                } else if (b.type === 'PNG') {
+                    finalBlock = new Uint8Array(4 + b.content.length);
+                    const view = new DataView(finalBlock.buffer);
+                    view.setUint32(0, b.content.length, false);
+                    finalBlock.set(b.content, 4);
+                } else {
+                    finalBlock = new Uint8Array(2 + b.content.length);
+                    const view = new DataView(finalBlock.buffer);
+                    view.setUint16(0, b.content.length, false);
+                    finalBlock.set(b.content, 2);
+                }
+                
+                preparedBlocks.push(finalBlock);
+                currentOffset += finalBlock.length;
+            });
+
+            // Tamanho total do arquivo
+            const totalSize = currentOffset;
+            const output = new Uint8Array(totalSize);
+
+            // Copiar cabeçalho original
+            output.set(fixedHeader, 0);
+
+            // CORREÇÃO 1: Atualizar offset 0x00 com o tamanho total do arquivo (último byte)
+            const outputView = new DataView(output.buffer);
+            outputView.setUint32(0, totalSize - 1, false);
+
+            // Atualizar tabela de ponteiros
+            ptrs.forEach((ptr, i) => {
+                const offsetNaTabela = 4 + (i * 4);
+                if (offsetNaTabela + 4 <= prof.headerEnd) {
+                    outputView.setUint32(offsetNaTabela, ptr, false);
+                }
+            });
+
+            // Inserir os blocos de dados
+            let writeOffset = prof.headerEnd;
+            preparedBlocks.forEach(block => {
+                output.set(block, writeOffset);
+                writeOffset += block.length;
+            });
+
+            // Download
+            const blob = new Blob([output], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'asterix_modificado.bin';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            alert(`Binário salvo!\nTamanho: ${totalSize} bytes\nPrimeiro offset (0x00): ${totalSize - 1}`);
         }
-        
-        preparedBlocks.push(finalBlock);
-        currentOffset += finalBlock.length;
-    });
-
-    // 2. Criar o buffer de saída com o tamanho exato
-    const totalSize = currentOffset;
-    const output = new Uint8Array(totalSize);
-
-    // 3. Inserir o cabeçalho original (preserva dados de sistema entre ponteiros)
-    output.set(fixedHeader, 0);
-
-    // 4. Atualizar apenas a tabela de ponteiros dentro do cabeçalho
-    const outputView = new DataView(output.buffer);
-    ptrs.forEach((ptr, i) => {
-        const offsetNaTabela = 4 + (i * 4);
-        if (offsetNaTabela + 4 <= prof.headerEnd) {
-            outputView.setUint32(offsetNaTabela, ptr, false);
-        }
-    });
-
-    // 5. Inserir os blocos de dados após o cabeçalho
-    let writeOffset = prof.headerEnd;
-    preparedBlocks.forEach(block => {
-        output.set(block, writeOffset);
-        writeOffset += block.length;
-    });
-
-    // 6. Download
-    const blob = new Blob([output], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'asterix_modificado.bin';
-    a.click();
-    URL.revokeObjectURL(url);
-
-    alert('Binário reconstruído com sucesso sem bytes extras!');
-}
-
     </script>
 </body>
 </html>
