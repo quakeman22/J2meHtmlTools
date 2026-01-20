@@ -1,189 +1,237 @@
-<!doctype html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
-<meta charset="utf-8">
-<title>HeroCraft Text Editor</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-body {
-    font-family: 'Courier New', monospace;
-    background:#fef6e4; /* creme claro */
-    margin:0;
-    color:#5c4033; /* marrom escuro elegante */
-}
-
-.app-header {
-    position:fixed;
-    top:0; left:0; width:100%;
-    background:#f2e6d8; /* creme médio */
-    color:#5c4033;
-    z-index:50;
-    padding:1rem;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-family:'Impact', sans-serif;
-    font-size:1.3rem;
-    box-shadow:0 4px 8px rgba(0,0,0,0.2);
-}
-
-.app-header .title { flex:1; text-align:center; }
-
-.editor-container {
-    margin-top:6rem;
-    max-width:900px;
-    width:95%;
-    margin-left:auto;
-    margin-right:auto;
-    display:flex;
-    flex-direction:column;
-    gap:0.5rem;
-}
-
-#list {
-    background:#fff6eb; /* creme suave */
-    border:2px solid #d8c4a0; /* tom elegante de contorno */
-    border-radius:0.5rem;
-    padding:1rem;
-    max-height:70vh;
-    overflow-y:auto;
-}
-
-#list::-webkit-scrollbar { width:12px; }
-#list::-webkit-scrollbar-track { background:#fef6e4; }
-#list::-webkit-scrollbar-thumb { background:#d8a95a; border-radius:6px; border:3px solid #fef6e4; }
-
-.modern-textarea {
-    background:#fffbed; /* creme leve */
-    color:#5c4033;
-    border:2px solid #d8c4a0;
-    border-radius:0.5rem;
-    padding:0.75rem;
-    font-family:'Courier New', monospace;
-    font-size:0.95rem;
-    width:100%;
-    resize:none;
-    transition: border 0.3s, box-shadow 0.3s;
-}
-
-.modern-textarea:focus {
-    border-color:#bfa06f;
-    outline:none;
-    box-shadow:0 0 10px #bfa06f50;
-}
-
-button {
-    font-family: 'Impact', sans-serif;
-    font-weight:bold;
-    border-radius:0.5rem;
-    border:2px solid #bfa06f;
-    background:#f2e6d8;
-    color:#5c4033;
-    padding:0.5rem 1rem;
-    cursor:pointer;
-    transition: all 0.3s;
-    margin-right:0.5rem;
-}
-
-button:hover {
-    background:#d8c4a0;
-    color:#fff6e4;
-    box-shadow:0 0 10px #bfa06f50;
-    transform: scale(1.05);
-}
-
-#file { display:none; }
-</style>
+    <meta charset="UTF-8">
+    <title>Class Editor Web + JSON</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .status { color: #666; font-size: 0.9em; margin-bottom: 20px; padding: 10px; background: #eee; border-radius: 4px; border-left: 4px solid #007bff; }
+        .block-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; flex-direction: column; }
+        .info { font-size: 11px; color: #888; margin-bottom: 5px; }
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        .index-label { font-weight: bold; color: #555; min-width: 30px; }
+        input[type="text"] { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .actions { margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+        button { padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: white; font-weight: bold; }
+        button:hover { opacity: 0.9; }
+        .btn-json { background: #6f42c1; } /* Roxo para JSON */
+        .btn-save { background: #28a745; }
+        .btn-clear { background: #6c757d; }
+    </style>
 </head>
 <body>
 
-<div class="app-header">
-    <button id="openFileBtn">📂 Abrir</button>
-    <div class="title">HeroCraft Editor</div>
-    <div>
-        <button id="infoBtn">ℹ️</button>
-        <button id="save" disabled>💾 Salvar</button>
+<div class="container">
+    <h2>Class Editor Pro</h2>
+    
+    <div class="actions">
+        <input type="file" id="fileInput" style="display: none;" accept=".class">
+        <input type="file" id="jsonInput" style="display: none;" accept=".json">
+        
+        <button onclick="document.getElementById('fileInput').click()">📂 Abrir .CLASS</button>
+        <button class="btn-json" id="btnExportJson">📤 Exportar JSON</button>
+        <button class="btn-json" onclick="document.getElementById('jsonInput').click()">📥 Importar JSON</button>
+        <button class="btn-save" id="btnSave">💾 Salvar .CLASS</button>
+        <button class="btn-clear" id="btnClear">🧹 Limpar</button>
     </div>
-</div>
 
-<div class="editor-container">
-    <input type="file" id="file" accept=".bin">
-    <input type="file" id="importFile" accept=".txt" style="display:none">
-    <div id="list"></div>
+    <div id="tvStatus" class="status">Aguardando arquivo Java Class...</div>
+    
+    <div id="containerBlocks"></div>
 </div>
 
 <script>
-// script permanece igual ao seu original
-let bytes;
-let blocks = [];
+let fileContentCache = null;
+let editorBlocks = [];
+let originalFileName = "arquivo.class";
 
-const fileInput = document.getElementById('file');
-const importInput = document.getElementById('importFile');
-const list = document.getElementById('list');
-const saveBtn = document.getElementById('save');
-const openFileBtn = document.getElementById('openFileBtn');
+const tvStatus = document.getElementById('tvStatus');
+const containerBlocks = document.getElementById('containerBlocks');
+const fileInput = document.getElementById('fileInput');
+const jsonInput = document.getElementById('jsonInput');
 
-openFileBtn.addEventListener('click', ()=>fileInput.click());
-fileInput.addEventListener('change', e=>{
-    const f = e.target.files[0];
-    if(!f) return;
+// --- LEITURA DO ARQUIVO .CLASS ---
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    originalFileName = file.name;
     const reader = new FileReader();
-    reader.onload = ev=>{
-        bytes = new Uint8Array(ev.target.result);
-        parseFile();
-        saveBtn.disabled = false;
+    updateStatus("Lendo estrutura binária...");
+    
+    reader.onload = function(event) {
+        fileContentCache = new Uint8Array(event.target.result);
+        if (parseClassFile()) {
+            renderEditableBlocks();
+            updateStatus(`Arquivo "${file.name}" carregado. ${editorBlocks.length} strings encontradas.`);
+        } else {
+            updateStatus("Erro: O arquivo não possui strings editáveis ou não é um .class válido.");
+        }
     };
-    reader.readAsArrayBuffer(f);
+    reader.readAsArrayBuffer(file);
 });
 
-function parseFile(){
-    blocks=[];
-    list.innerHTML='';
-    let offset=0;
-    let blockIndex=0;
-
-    while(offset + 2 <= bytes.length){
-        let size = (bytes[offset] << 8) + bytes[offset+1];
-        offset += 2;
-        const textBytes = bytes.slice(offset, offset+size);
-        let text = String.fromCharCode(...textBytes);
-
-        const card = document.createElement('div');
-        card.className="mb-2";
-        const ta = document.createElement('textarea');
-        ta.className="modern-textarea";
-        ta.value=text;
-        ta.rows=Math.max(1,text.split('\n').length);
-        ta.oninput=()=>blocks.find(b=>b.input===ta).text = ta.value;
-        card.appendChild(ta);
-        list.appendChild(card);
-
-        blocks.push({input:ta,text,index:blockIndex});
-        offset += size;
-        blockIndex++;
+// --- EXPORTAR PARA JSON ---
+document.getElementById('btnExportJson').onclick = function() {
+    if (editorBlocks.length === 0) {
+        alert("Abra um arquivo .class primeiro!");
+        return;
     }
+
+    // Criar objeto no estilo [ index: "texto" ]
+    const jsonObject = {};
+    editorBlocks.forEach((block, index) => {
+        jsonObject[index] = block.currentText;
+    });
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(jsonObject, null, 4));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", originalFileName.replace(".class", "") + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+};
+
+// --- IMPORTAR DE JSON ---
+jsonInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file || editorBlocks.length === 0) {
+        alert("Carregue o arquivo .class antes de importar o JSON!");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const importedData = JSON.parse(event.target.result);
+            let count = 0;
+
+            // Mapear as chaves do JSON para os blocos carregados
+            Object.keys(importedData).forEach(key => {
+                const index = parseInt(key);
+                if (editorBlocks[index]) {
+                    editorBlocks[index].currentText = importedData[key];
+                    count++;
+                }
+            });
+
+            renderEditableBlocks();
+            updateStatus(`JSON importado! ${count} textos atualizados.`);
+        } catch (err) {
+            alert("Erro ao ler JSON: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+});
+
+// --- LÓGICA DE PARSING BINÁRIO ---
+function parseClassFile() {
+    editorBlocks = [];
+    try {
+        const view = new DataView(fileContentCache.buffer);
+        let offset = 8; // Skip Magic e Version
+        const cpCount = view.getUint16(offset);
+        offset += 2;
+
+        let utf8Map = new Map();
+        let stringRefs = [];
+
+        for (let i = 1; i < cpCount; i++) {
+            const tag = view.getUint8(offset++);
+            if (tag === 1) { // Utf8
+                const len = view.getUint16(offset);
+                offset += 2;
+                const bytes = fileContentCache.slice(offset, offset + len);
+                const text = new TextDecoder().decode(bytes);
+                utf8Map.set(i, { text, offset, len });
+                offset += len;
+            } else if (tag === 7 || tag === 8) { // Class ou String
+                const idx = view.getUint16(offset);
+                if (tag === 8) stringRefs.push(idx);
+                offset += 2;
+            } else if (tag === 3 || tag === 4 || tag === 9 || tag === 10 || tag === 11 || tag === 12) {
+                offset += 4;
+            } else if (tag === 5 || tag === 6) {
+                offset += 8; i++;
+            }
+        }
+
+        stringRefs.forEach(idx => {
+            if (utf8Map.has(idx)) {
+                const item = utf8Map.get(idx);
+                editorBlocks.push({
+                    originalText: item.text,
+                    currentText: item.text,
+                    offset: item.offset,
+                    originalLength: item.len
+                });
+            }
+        });
+        return editorBlocks.length > 0;
+    } catch (e) { return false; }
 }
 
-saveBtn.addEventListener('click', ()=>{
-    const out=[];
-    for(const b of blocks){
-        const size = b.text.length;
-        out.push((size >> 8) & 0xFF, size & 0xFF);
-        for(let i=0;i<b.text.length;i++) out.push(b.text.charCodeAt(i));
-    }
-    const blob = new Blob([new Uint8Array(out)], {type:'application/octet-stream'});
+function renderEditableBlocks() {
+    containerBlocks.innerHTML = '';
+    editorBlocks.forEach((block, i) => {
+        const div = document.createElement('div');
+        div.className = 'block-item';
+        div.innerHTML = `
+            <div class="info">Offset: ${block.offset} | Original: ${block.originalLength} bytes</div>
+            <div class="input-group">
+                <span class="index-label">${i}:</span>
+                <input type="text" value="${escapeHtml(block.currentText)}" oninput="updateBlock(${i}, this.value)">
+            </div>
+        `;
+        containerBlocks.appendChild(div);
+    });
+}
+
+function updateBlock(index, val) {
+    editorBlocks[index].currentText = val;
+}
+
+document.getElementById('btnSave').onclick = function() {
+    if (!fileContentCache) return;
+    // ... (Lógica de salvamento binário idêntica à anterior)
+    saveBinary();
+};
+
+function saveBinary() {
+    let delta = 0;
+    editorBlocks.forEach(b => delta += (new TextEncoder().encode(b.currentText).length - b.originalLength));
+    
+    const newFile = new Uint8Array(fileContentCache.length + delta);
+    const view = new DataView(newFile.buffer);
+    let lastRead = 0, lastWrite = 0;
+
+    editorBlocks.forEach(block => {
+        const header = block.offset - 2;
+        newFile.set(fileContentCache.slice(lastRead, header), lastWrite);
+        lastWrite += (header - lastRead);
+
+        const bytes = new TextEncoder().encode(block.currentText);
+        view.setUint16(lastWrite, bytes.length, false);
+        lastWrite += 2;
+        newFile.set(bytes, lastWrite);
+        lastWrite += bytes.length;
+        lastRead = block.offset + block.originalLength;
+    });
+
+    newFile.set(fileContentCache.slice(lastRead), lastWrite);
+    const blob = new Blob([newFile], {type: "application/octet-stream"});
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='editado.bin';
+    a.href = url;
+    a.download = "modded_" + originalFileName;
     a.click();
-    URL.revokeObjectURL(a.href);
-});
+}
 
-document.getElementById('infoBtn').addEventListener('click', ()=>{
-    alert("Editor de textos para jogos Herocraft\n\nDesenvolvedor: QUAKEMAN\n2024/25\nDiscord: https://discord.gg/WyJtDDqJ9c\nSite: https://quakeman0.blogspot.com");
-});
+function updateStatus(m) { tvStatus.innerText = m; }
+function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+document.getElementById('btnClear').onclick = () => location.reload();
 </script>
-
 </body>
 </html>
