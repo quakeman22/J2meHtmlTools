@@ -1,181 +1,237 @@
-<!doctype html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
-<meta charset="utf-8">
-<title>Editor .class Desktop</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  body { font-family: 'Inter', sans-serif; background:#18181b; margin:0; color:#e0e0e0; }
-  .header { display:flex; justify-content:space-between; align-items:center; padding:1rem 2rem; background:#27272a; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
-  .header .title { font-size:1.5rem; font-weight:bold; }
-  .btn { padding:0.5rem 1rem; border-radius:0.5rem; border:none; cursor:pointer; font-weight:500; }
-  .btn:hover { opacity:0.85; }
-  .btn-open { background:#3b82f6; color:white; }
-  .btn-save { background:#16a34a; color:white; }
-  .tabs { display:flex; border-bottom:1px solid #3a3a4a; margin-top:1rem; }
-  .tab { padding:0.75rem 1.5rem; cursor:pointer; font-weight:500; }
-  .tab.active { border-bottom:3px solid #5c6bc0; color:#5c6bc0; }
-  .tab-content { padding:1rem 2rem; max-height:70vh; overflow-y:auto; }
-  .textarea { width:100%; background:#1e1e2e; color:#e0e0e0; border:1px solid #3a3a4a; border-radius:0.75rem; padding:0.75rem; font-size:0.95rem; resize:none; margin-bottom:0.75rem; }
-  .textarea:focus { border-color:#5c6bc0; outline:none; }
-</style>
+    <meta charset="UTF-8">
+    <title>Class Editor Web + JSON</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .status { color: #666; font-size: 0.9em; margin-bottom: 20px; padding: 10px; background: #eee; border-radius: 4px; border-left: 4px solid #007bff; }
+        .block-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; flex-direction: column; }
+        .info { font-size: 11px; color: #888; margin-bottom: 5px; }
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        .index-label { font-weight: bold; color: #555; min-width: 30px; }
+        input[type="text"] { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .actions { margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+        button { padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: white; font-weight: bold; }
+        button:hover { opacity: 0.9; }
+        .btn-json { background: #6f42c1; } /* Roxo para JSON */
+        .btn-save { background: #28a745; }
+        .btn-clear { background: #6c757d; }
+    </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="title">Editor de .class</div>
-  <div>
-    <button class="btn btn-open" id="openFileBtn">📂 Abrir</button>
-    <button class="btn btn-save" id="saveFileBtn" disabled>💾 Salvar</button>
-  </div>
-</div>
+<div class="container">
+    <h2>Class Editor Pro</h2>
+    
+    <div class="actions">
+        <input type="file" id="fileInput" style="display: none;" accept=".class">
+        <input type="file" id="jsonInput" style="display: none;" accept=".json">
+        
+        <button onclick="document.getElementById('fileInput').click()">📂 Abrir .CLASS</button>
+        <button class="btn-json" id="btnExportJson">📤 Exportar JSON</button>
+        <button class="btn-json" onclick="document.getElementById('jsonInput').click()">📥 Importar JSON</button>
+        <button class="btn-save" id="btnSave">💾 Salvar .CLASS</button>
+        <button class="btn-clear" id="btnClear">🧹 Limpar</button>
+    </div>
 
-<div class="tabs">
-  <div class="tab active" data-tab="editor">Editor</div>
-  <div class="tab" data-tab="credits">Créditos</div>
-  <div class="tab" data-tab="info">Informações</div>
+    <div id="tvStatus" class="status">Aguardando arquivo Java Class...</div>
+    
+    <div id="containerBlocks"></div>
 </div>
-
-<div class="tab-content" id="editorTab">
-  <div id="textList"><p class="text-gray-500 text-center">Nenhum arquivo carregado.</p></div>
-</div>
-
-<div class="tab-content hidden" id="creditsTab">
-  <h2 class="text-xl font-bold mb-2">🎨 Créditos</h2>
-  <p>Editor de textos .class inspirado no trabalho de Quakeman0.</p>
-  <p><a href="https://discord.gg/du9v2FECkC" target="_blank" class="text-blue-400">Discord</a> | 
-     <a href="https://quakeman0.blogspot.com" target="_blank" class="text-green-400">Site</a></p>
-</div>
-
-<div class="tab-content hidden" id="infoTab">
-  <h2 class="text-xl font-bold mb-2">ℹ️ Informações</h2>
-  <p>Editor simples para modificar textos dentro de arquivos <code>.class</code>.</p>
-  <ul class="list-disc list-inside">
-    <li>Menu superior para abrir e salvar arquivos</li>
-    <li>Abas para alternar entre Editor, Créditos e Informações</li>
-  </ul>
-</div>
-
-<input type="file" id="fileInput" accept=".class" class="hidden">
 
 <script>
-let bytes, cpInfo;
+let fileContentCache = null;
+let editorBlocks = [];
+let originalFileName = "arquivo.class";
 
-// Tab switching
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
-    document.getElementById(tab.dataset.tab + "Tab").classList.remove('hidden');
-  });
+const tvStatus = document.getElementById('tvStatus');
+const containerBlocks = document.getElementById('containerBlocks');
+const fileInput = document.getElementById('fileInput');
+const jsonInput = document.getElementById('jsonInput');
+
+// --- LEITURA DO ARQUIVO .CLASS ---
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    originalFileName = file.name;
+    const reader = new FileReader();
+    updateStatus("Lendo estrutura binária...");
+    
+    reader.onload = function(event) {
+        fileContentCache = new Uint8Array(event.target.result);
+        if (parseClassFile()) {
+            renderEditableBlocks();
+            updateStatus(`Arquivo "${file.name}" carregado. ${editorBlocks.length} strings encontradas.`);
+        } else {
+            updateStatus("Erro: O arquivo não possui strings editáveis ou não é um .class válido.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
 });
 
-// Open file
-document.getElementById('openFileBtn').addEventListener('click', ()=>{
-  document.getElementById('fileInput').click();
-});
-
-// Save file
-document.getElementById('saveFileBtn').addEventListener('click', ()=>{
-  const newBytes = rebuildClass();
-  const blob = new Blob([newBytes], {type:'application/octet-stream'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'modified.class';
-  a.click();
-});
-
-// File reading
-document.getElementById('fileInput').addEventListener('change', e=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ev=>{
-    bytes = new Uint8Array(ev.target.result);
-    parseClass();
-    renderList();
-    document.getElementById('saveFileBtn').disabled=false;
-  };
-  reader.readAsArrayBuffer(f);
-});
-
-// Parser functions
-function readU1(v,o){return v.getUint8(o);}
-function readU2(v,o){return v.getUint16(o,false);}
-function readU4(v,o){return v.getUint32(o,false);}
-
-function parseClass(){
-  const v = new DataView(bytes.buffer);
-  if(readU4(v,0)!==0xCAFEBABE) { alert("Arquivo inválido"); return; }
-  let cpCount = readU2(v,8);
-  let off = 10;
-  cpInfo = [];
-  for(let i=1;i<cpCount;i++){
-    const tag = readU1(v,off); off++;
-    const e = {i, tag, start: off-1};
-    if(tag===1){
-      const len = readU2(v,off); off+=2;
-      const s = bytes.subarray(off, off+len); off+=len;
-      e.text = new TextDecoder().decode(s);
-      e.len = len;
-    } else if(tag===5||tag===6){off+=8; i++;} 
-    else if(tag===3||tag===4){off+=4;} 
-    else if(tag===7||tag===8||tag===16){off+=2;}
-    else if(tag===9||tag===10||tag===11||tag===12||tag===18){off+=4;}
-    else if(tag===15){off+=3;}
-    else { console.log("Tag desconhecido", tag); }
-    e.end = off;
-    cpInfo.push(e);
-  }
-}
-
-function isLikelyDialogue(txt){
-  if(!txt) return false;
-  if(txt.length < 2) return false;
-  if(txt.startsWith("java/")) return false;
-  return true;
-}
-
-function renderList(){
-  const list = document.getElementById('textList');
-  list.innerHTML = '';
-  const dialogs = cpInfo.filter(e=>e.tag===1 && isLikelyDialogue(e.text));
-  if(dialogs.length===0){
-    list.innerHTML='<p class="text-gray-500 text-center">Nenhum diálogo/texto encontrado.</p>';
-    return;
-  }
-  dialogs.forEach(e=>{
-    const ta = document.createElement('textarea');
-    ta.value = e.text;
-    ta.className="textarea";
-    ta.oninput = ()=>e.text = ta.value;
-    list.appendChild(ta);
-  });
-}
-
-function rebuildClass(){
-  const out = [];
-  let pos=0;
-  function push(b){out.push(...b);}
-  push(bytes.subarray(0,10)); pos=10;
-  for(const e of cpInfo){
-    if(e.tag===1){
-      const enc = new TextEncoder().encode(e.text);
-      const buf = new Uint8Array(1+2+enc.length);
-      buf[0]=1; buf[1]=enc.length>>8; buf[2]=enc.length&0xFF;
-      buf.set(enc,3);
-      push(buf);
-    }else{
-      push(bytes.subarray(e.start, e.end));
+// --- EXPORTAR PARA JSON ---
+document.getElementById('btnExportJson').onclick = function() {
+    if (editorBlocks.length === 0) {
+        alert("Abra um arquivo .class primeiro!");
+        return;
     }
-    pos=e.end;
-  }
-  push(bytes.subarray(pos));
-  return new Uint8Array(out);
-}
-</script>
 
+    // Criar objeto no estilo [ index: "texto" ]
+    const jsonObject = {};
+    editorBlocks.forEach((block, index) => {
+        jsonObject[index] = block.currentText;
+    });
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(jsonObject, null, 4));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", originalFileName.replace(".class", "") + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+};
+
+// --- IMPORTAR DE JSON ---
+jsonInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file || editorBlocks.length === 0) {
+        alert("Carregue o arquivo .class antes de importar o JSON!");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const importedData = JSON.parse(event.target.result);
+            let count = 0;
+
+            // Mapear as chaves do JSON para os blocos carregados
+            Object.keys(importedData).forEach(key => {
+                const index = parseInt(key);
+                if (editorBlocks[index]) {
+                    editorBlocks[index].currentText = importedData[key];
+                    count++;
+                }
+            });
+
+            renderEditableBlocks();
+            updateStatus(`JSON importado! ${count} textos atualizados.`);
+        } catch (err) {
+            alert("Erro ao ler JSON: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+});
+
+// --- LÓGICA DE PARSING BINÁRIO ---
+function parseClassFile() {
+    editorBlocks = [];
+    try {
+        const view = new DataView(fileContentCache.buffer);
+        let offset = 8; // Skip Magic e Version
+        const cpCount = view.getUint16(offset);
+        offset += 2;
+
+        let utf8Map = new Map();
+        let stringRefs = [];
+
+        for (let i = 1; i < cpCount; i++) {
+            const tag = view.getUint8(offset++);
+            if (tag === 1) { // Utf8
+                const len = view.getUint16(offset);
+                offset += 2;
+                const bytes = fileContentCache.slice(offset, offset + len);
+                const text = new TextDecoder().decode(bytes);
+                utf8Map.set(i, { text, offset, len });
+                offset += len;
+            } else if (tag === 7 || tag === 8) { // Class ou String
+                const idx = view.getUint16(offset);
+                if (tag === 8) stringRefs.push(idx);
+                offset += 2;
+            } else if (tag === 3 || tag === 4 || tag === 9 || tag === 10 || tag === 11 || tag === 12) {
+                offset += 4;
+            } else if (tag === 5 || tag === 6) {
+                offset += 8; i++;
+            }
+        }
+
+        stringRefs.forEach(idx => {
+            if (utf8Map.has(idx)) {
+                const item = utf8Map.get(idx);
+                editorBlocks.push({
+                    originalText: item.text,
+                    currentText: item.text,
+                    offset: item.offset,
+                    originalLength: item.len
+                });
+            }
+        });
+        return editorBlocks.length > 0;
+    } catch (e) { return false; }
+}
+
+function renderEditableBlocks() {
+    containerBlocks.innerHTML = '';
+    editorBlocks.forEach((block, i) => {
+        const div = document.createElement('div');
+        div.className = 'block-item';
+        div.innerHTML = `
+            <div class="info">Offset: ${block.offset} | Original: ${block.originalLength} bytes</div>
+            <div class="input-group">
+                <span class="index-label">${i}:</span>
+                <input type="text" value="${escapeHtml(block.currentText)}" oninput="updateBlock(${i}, this.value)">
+            </div>
+        `;
+        containerBlocks.appendChild(div);
+    });
+}
+
+function updateBlock(index, val) {
+    editorBlocks[index].currentText = val;
+}
+
+document.getElementById('btnSave').onclick = function() {
+    if (!fileContentCache) return;
+    // ... (Lógica de salvamento binário idêntica à anterior)
+    saveBinary();
+};
+
+function saveBinary() {
+    let delta = 0;
+    editorBlocks.forEach(b => delta += (new TextEncoder().encode(b.currentText).length - b.originalLength));
+    
+    const newFile = new Uint8Array(fileContentCache.length + delta);
+    const view = new DataView(newFile.buffer);
+    let lastRead = 0, lastWrite = 0;
+
+    editorBlocks.forEach(block => {
+        const header = block.offset - 2;
+        newFile.set(fileContentCache.slice(lastRead, header), lastWrite);
+        lastWrite += (header - lastRead);
+
+        const bytes = new TextEncoder().encode(block.currentText);
+        view.setUint16(lastWrite, bytes.length, false);
+        lastWrite += 2;
+        newFile.set(bytes, lastWrite);
+        lastWrite += bytes.length;
+        lastRead = block.offset + block.originalLength;
+    });
+
+    newFile.set(fileContentCache.slice(lastRead), lastWrite);
+    const blob = new Blob([newFile], {type: "application/octet-stream"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "modded_" + originalFileName;
+    a.click();
+}
+
+function updateStatus(m) { tvStatus.innerText = m; }
+function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+document.getElementById('btnClear').onclick = () => location.reload();
+</script>
 </body>
 </html>
