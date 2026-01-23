@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Offsets de Imagens</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.9em;
+            font-weight: 400;
+        }
+
+        .upload-section {
+            background: #141414;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.2s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #333;
+            background: #181818;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #ffffff;
+            color: #000;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 30px;
+        }
+
+        .image-card {
+            background: #141414;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .image-card:hover {
+            border-color: #333;
+            background: #181818;
+        }
+
+        .image-preview {
+            width: 100%;
+            height: 160px;
+            background: #0a0a0a;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .image-info {
+            font-size: 0.75em;
+            color: #888;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .image-info strong {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .replace-btn {
+            width: 100%;
+            background: #ffffff;
+            color: #000;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .replace-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .export-section {
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 1px solid #222;
+            text-align: center;
+        }
+
+        .export-btn {
+            background: #ffffff;
+            color: #000;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .export-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .export-btn:disabled {
+            background: #222;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            border: 1px solid transparent;
+        }
+
+        .status.success {
+            background: #0a2f1a;
+            color: #4ade80;
+            border-color: #1a4d2e;
+        }
+
+        .status.error {
+            background: #2f0a0a;
+            color: #f87171;
+            border-color: #4d1a1a;
+        }
+
+        .status.info {
+            background: #0a1f2f;
+            color: #60a5fa;
+            border-color: #1a334d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Editor de Offsets de Imagens</h1>
+            <p class="subtitle">Substitua imagens PNG e recalcule offsets automaticamente</p>
+        </header>
+
+        <div class="upload-section">
+            <p style="color: #888; margin-bottom: 20px; font-size: 0.9em;">
+                Selecione o arquivo que contém a tabela de offsets e as imagens PNG
+            </p>
+            <input type="file" id="fileInput" class="file-input" accept="*">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                Selecionar Arquivo
+            </button>
+        </div>
+
+        <div id="status"></div>
+        <div id="imagesContainer" class="images-grid"></div>
+
+        <div id="exportSection" class="export-section" style="display: none;">
+            <button class="export-btn" onclick="exportFile()">
+                Exportar Arquivo Modificado
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let fileData = null;
+        let offsets = [];
+        let images = [];
+        let headerSize = 0;
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showStatus('Carregando arquivo...', 'info');
+            
+            try {
+                fileData = await file.arrayBuffer();
+                parseFile();
+            } catch (error) {
+                showStatus('Erro ao carregar arquivo: ' + error.message, 'error');
+            }
+        }
+
+        function parseFile() {
+            const dataView = new DataView(fileData);
+            offsets = [];
+            images = [];
+            
+            showStatus('Analisando arquivo...', 'info');
+            
+            const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47];
+            
+            console.log('Tamanho do arquivo:', fileData.byteLength, 'bytes');
+            console.log('Primeiros 128 bytes:', Array.from(new Uint8Array(fileData.slice(0, 128)))
+                .map(b => b.toString(16).padStart(2, '0')).join(' '));
+            
+            // Primeiro, encontra onde começa o primeiro PNG
+            let firstPNGPos = -1;
+            for (let i = 0; i < fileData.byteLength - 4; i++) {
+                if (dataView.getUint8(i) === PNG_SIGNATURE[0] &&
+                    dataView.getUint8(i + 1) === PNG_SIGNATURE[1] &&
+                    dataView.getUint8(i + 2) === PNG_SIGNATURE[2] &&
+                    dataView.getUint8(i + 3) === PNG_SIGNATURE[3]) {
+                    firstPNGPos = i;
+                    console.log('Primeira assinatura PNG encontrada na posição:', i, '(0x' + i.toString(16) + ')');
+                    break;
+                }
+            }
+            
+            if (firstPNGPos === -1) {
+                showStatus('❌ Nenhuma assinatura PNG encontrada no arquivo', 'error');
+                return;
+            }
+            
+            headerSize = firstPNGPos;
+            
+            // Agora procura por todos os valores que podem ser offsets no cabeçalho
+            // Testa múltiplos padrões de leitura
+            const candidateOffsets = [];
+            
+            // Testa cada posição no header
+            for (let pos = 0; pos < firstPNGPos - 3; pos++) {
+                const offset = dataView.getUint32(pos, false); // big-endian
+                
+                // Valida offset
+                if (offset >= firstPNGPos && offset < fileData.byteLength) {
+                    // Verifica se há PNG no offset (±32 bytes de tolerância)
+                    let hasPNG = false;
+                    let pngPos = offset;
+                    
+                    for (let check = Math.max(0, offset - 32); check <= Math.min(offset + 32, fileData.byteLength - 4); check++) {
+                        if (dataView.getUint8(check) === PNG_SIGNATURE[0] &&
+                            dataView.getUint8(check + 1) === PNG_SIGNATURE[1] &&
+                            dataView.getUint8(check + 2) === PNG_SIGNATURE[2] &&
+                            dataView.getUint8(check + 3) === PNG_SIGNATURE[3]) {
+                            hasPNG = true;
+                            pngPos = check;
+                            break;
+                        }
+                    }
+                    
+                    if (hasPNG) {
+                        candidateOffsets.push({ 
+                            position: pos, 
+                            value: offset,
+                            realPNG: pngPos
+                        });
+                        console.log(`Candidato encontrado: pos=${pos} (0x${pos.toString(16)}), offset=0x${offset.toString(16)}, PNG em=0x${pngPos.toString(16)}`);
+                    }
+                }
+            }
+            
+            // Remove offsets duplicados (que apontam para o mesmo PNG)
+            const uniqueOffsets = [];
+            const seenPNGs = new Set();
+            
+            for (const candidate of candidateOffsets) {
+                if (!seenPNGs.has(candidate.realPNG)) {
+                    uniqueOffsets.push(candidate);
+                    seenPNGs.add(candidate.realPNG);
+                }
+            }
+            
+            // Ordena por posição do PNG
+            uniqueOffsets.sort((a, b) => a.realPNG - b.realPNG);
+            
+            offsets = uniqueOffsets;
+            
+            console.log('Total de offsets únicos e válidos:', offsets.length);
+            console.log('Offsets encontrados:', offsets.map(o => `0x${o.value.toString(16)}`).join(', '));
+
+            if (offsets.length === 0) {
+                showStatus('❌ Nenhum offset encontrado no arquivo. Verifique o formato do arquivo.', 'error');
+                return;
+            }
+
+            // Extrai as imagens baseado nos offsets
+            for (let i = 0; i < offsets.length; i++) {
+                const startOffset = offsets[i].realPNG;
+                const endOffset = i < offsets.length - 1 ? offsets[i + 1].realPNG : fileData.byteLength;
+                
+                console.log(`Imagem ${i + 1}: PNG em=${startOffset} (0x${startOffset.toString(16)}), fim=${endOffset}, tamanho=${endOffset - startOffset}`);
+                
+                const imageData = fileData.slice(startOffset, endOffset);
+                
+                // Verifica assinatura PNG
+                const imgView = new DataView(imageData);
+                const isPNG = imgView.getUint8(0) === 0x89 && 
+                             imgView.getUint8(1) === 0x50 && 
+                             imgView.getUint8(2) === 0x4E && 
+                             imgView.getUint8(3) === 0x47;
+                
+                // Mostra primeiros bytes para debug
+                const firstBytes = Array.from(new Uint8Array(imageData.slice(0, 8)))
+                    .map(b => b.toString(16).padStart(2, '0')).join(' ');
+                console.log(`Primeiros bytes: ${firstBytes}, é PNG:`, isPNG);
+                
+                const blob = new Blob([imageData], { type: 'image/png' });
+                const url = URL.createObjectURL(blob);
+                
+                images.push({
+                    index: i,
+                    offset: offsets[i],
+                    startOffset,
+                    endOffset,
+                    size: endOffset - startOffset,
+                    blob,
+                    url,
+                    data: imageData,
+                    isPNG
+                });
+            }
+
+            displayImages();
+            showStatus(`✅ Arquivo carregado! ${offsets.length} imagens encontradas.`, 'success');
+        }
+
+        function displayImages() {
+            const container = document.getElementById('imagesContainer');
+            container.innerHTML = '';
+
+            images.forEach((img, idx) => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.innerHTML = `
+                    <div class="image-preview">
+                        <img src="${img.url}" alt="Imagem ${idx + 1}" onerror="this.parentElement.innerHTML='<div style=\'color:#999\'>❌ Erro ao carregar</div>'">
+                    </div>
+                    <div class="image-info">
+                        <strong>Imagem ${idx + 1}</strong><br>
+                        Offset tabela: 0x${img.offset.value.toString(16).toUpperCase().padStart(8, '0')}<br>
+                        PNG real: 0x${img.startOffset.toString(16).toUpperCase().padStart(8, '0')}<br>
+                        Tamanho: ${formatBytes(img.size)}<br>
+                        ${img.isPNG ? '✅ PNG válido' : '⚠️ Pode não ser PNG'}
+                    </div>
+                    <input type="file" id="replace-${idx}" accept="image/png" style="display: none;">
+                    <button class="replace-btn" onclick="selectReplacement(${idx})">
+                        Substituir Imagem
+                    </button>
+                `;
+                container.appendChild(card);
+
+                document.getElementById(`replace-${idx}`).addEventListener('change', (e) => replaceImage(idx, e));
+            });
+
+            document.getElementById('exportSection').style.display = 'block';
+        }
+
+        function selectReplacement(idx) {
+            document.getElementById(`replace-${idx}`).click();
+        }
+
+        async function replaceImage(idx, e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const arrayBuffer = await file.arrayBuffer();
+            const blob = new Blob([arrayBuffer], { type: 'image/png' });
+            const url = URL.createObjectURL(blob);
+
+            URL.revokeObjectURL(images[idx].url);
+            
+            images[idx].data = arrayBuffer;
+            images[idx].blob = blob;
+            images[idx].url = url;
+            images[idx].size = arrayBuffer.byteLength;
+
+            displayImages();
+            showStatus(`✅ Imagem ${idx + 1} substituída com sucesso!`, 'success');
+        }
+
+        function exportFile() {
+            // Reconstrói o arquivo com novos offsets
+            let currentOffset = headerSize;
+            const newOffsets = [];
+            const imageParts = [];
+
+            // Calcula novos offsets
+            images.forEach((img) => {
+                newOffsets.push(currentOffset);
+                imageParts.push(img.data);
+                currentOffset += img.data.byteLength;
+            });
+
+            // Cria novo header com offsets atualizados
+            const headerBuffer = new ArrayBuffer(headerSize);
+            const headerView = new DataView(headerBuffer);
+
+            newOffsets.forEach((offset, idx) => {
+                headerView.setUint32(idx * 4, offset, false);
+            });
+
+            // Combina tudo
+            const parts = [headerBuffer, ...imageParts];
+            const finalBlob = new Blob(parts);
+
+            // Download
+            const url = URL.createObjectURL(finalBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'arquivo_modificado.bin';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showStatus('✅ Arquivo exportado com sucesso!', 'success');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+    </script>
+</body>
+</html>
