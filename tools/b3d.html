@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab3D Multi-Game Editor - Professional Suite</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --border-color: #444;
+            --text-color: #e0e0e0;
+            --accent-green: #4caf50;
+            --accent-blue: #2196f3;
+            --accent-red: #d32f2f;
+            --accent-purple: #9c27b0;
+            --input-bg: #000;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Tabs Styling */
+        .tabs {
+            display: flex;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 5px;
+            padding: 2px;
+            margin-bottom: 10px;
+        }
+
+        .tab-button {
+            background: #2d2d2d;
+            color: #e0e0e0;
+            padding: 10px 20px;
+            margin: 2px;
+            border: none;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .tab-button.active {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .tab-button:hover:not(.active) {
+            background: #3d3d3d;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 3px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .btn:disabled { background: #555 !important; cursor: not-allowed; }
+        .btn-green { background: var(--accent-green); }
+        .btn-green:hover { background: #66bb6a; }
+        .btn-blue { background: var(--accent-blue); }
+        .btn-blue:hover { background: #42a5f5; }
+        .btn-purple { background: var(--accent-purple); }
+        .btn-purple:hover { background: #ab47bc; }
+        .btn-red { background: #dc3545; }
+        .btn-red:hover { background: #e74c3c; }
+        .btn-gray { background: #444; }
+
+        select, input[type="text"], textarea {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        /* Splitter View for Editor */
+        .splitter {
+            display: flex;
+            flex: 1;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-radius: 6px;
+            padding: 10px;
+            background: var(--panel-bg);
+            overflow: hidden;
+        }
+
+        .panel-green { border: 2px solid var(--accent-green); }
+        .panel-blue { border: 2px solid var(--accent-blue); }
+
+        .panel-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .panel-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* Editor Items */
+        .editor-item {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .editor-item.bypass {
+            background: #1a1a1a;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .id-label { font-family: 'Courier New', monospace; font-weight: bold; font-size: 12px; }
+        
+        .game-input {
+            width: 100%;
+            background: var(--input-bg);
+            color: #fff;
+            border: 2px solid #555;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+        
+        .game-input:focus { border-color: var(--accent-green); outline: none; }
+        
+        .bypass-input {
+            width: 100%;
+            background: var(--input-bg);
+            color: #00ff00;
+            border: 2px solid #444;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+        .bypass-input:focus { border-color: var(--accent-blue); outline: none; }
+
+        .preview-box {
+            color: #0f0;
+            background: #0a0a0a;
+            padding: 8px;
+            border: 1px dashed #444;
+            font-family: 'Courier New', monospace;
+            margin-top: 5px;
+            word-wrap: break-word;
+        }
+
+        .original-text {
+            color: #ffbc00;
+            background: #1a1a1a;
+            padding: 6px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e1e1e;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: left;
+            color: #e0e0e0;
+        }
+        th { background: #333; }
+
+        /* Group Box */
+        .group-box {
+            background: #252525;
+            border: 2px solid;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* Hex Translator Areas */
+        .hex-display {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px dotted #555;
+            font-family: monospace;
+            font-size: 16px;
+            margin-top: 10px;
+            word-wrap: break-word;
+            min-height: 20px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .hidden { display: none; }
+        .text-center { text-align: center; }
+        .small-text { font-size: 10px; color: #888; }
+    </style>
+</head>
+<body>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="switchTab('tab-editor')">📝 MULTI-GAME EDITOR</button>
+        <button class="tab-button" onclick="switchTab('tab-scanner')">🔍 B3D Scanner</button>
+        <button class="tab-button" onclick="switchTab('tab-converter')">🖼️ Image Converter</button>
+        <button class="tab-button" onclick="switchTab('tab-translator')">🔤 CONVERSOR DE TEXTOS</button>
+    </div>
+
+    <div id="tab-editor" class="tab-content active">
+        <div class="toolbar">
+            <span style="color: var(--accent-green); font-weight: bold;">🎮 Multi-Game Editor</span>
+            <label>Jogo:</label>
+            <select id="gameSelector" onchange="changeGame()">
+                <option value="Laboratory 3D">Laboratory 3D</option>
+                <option value="Bunker 3D">Bunker 3D</option>
+                <option value="Castle 3D">Castle 3D</option>
+            </select>
+            <div style="flex: 1;"></div>
+            <input type="file" id="fileInput" style="display: none;" accept=".bin" onchange="loadFile(this)">
+            <button class="btn btn-green" onclick="document.getElementById('fileInput').click()">📂 Carregar</button>
+            <button class="btn btn-blue" onclick="saveFile()">💾 Salvar</button>
+            <button class="btn btn-purple" onclick="exportJson()">📤 Exportar</button>
+            <button class="btn btn-purple" onclick="document.getElementById('jsonInput').click()">📥 Importar</button>
+            <input type="file" id="jsonInput" style="display: none;" accept=".json" onchange="importJson(this)">
+        </div>
+
+        <div class="splitter">
+            <div class="panel panel-green">
+                <div class="panel-header" style="color: var(--accent-green)">📖 Normal View - Visualização</div>
+                <div class="panel-scroll" id="normalViewContainer">
+                    <div class="text-center" style="color: #666; margin-top: 50px;">Carregue um arquivo .BIN para começar</div>
+                </div>
+            </div>
+
+            <div class="panel panel-blue">
+                <div class="panel-header" style="color: var(--accent-blue)">✏️ Bypass Editor - Edição</div>
+                <div class="panel-scroll" id="bypassEditorContainer">
+                    <div class="text-center" style="color: #666; margin-top: 50px;">Aguardando arquivo...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-scanner" class="tab-content" style="padding: 20px;">
+        <h2 style="color: var(--accent-green);">🔍 B3D Signature Scanner & ZIP Export</h2>
+        <p style="color: #888;">Verifica se os arquivos contêm a assinatura '49 48 44 52' na posição 10-13</p>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="file" id="scanInput" multiple style="display: none;" onchange="scanFiles(this)">
+            <button class="btn btn-green" style="padding: 12px;" onclick="document.getElementById('scanInput').click()">📂 Selecionar Arquivos B3D</button>
+            <button id="btnDownloadZip" class="btn btn-red" style="padding: 12px;" onclick="downloadInvalidZip()" disabled>💾 Baixar Inválidos (.zip)</button>
+            <button class="btn btn-gray" style="padding: 12px;" onclick="clearScan()">🗑️ Limpar</button>
+        </div>
+
+        <div class="panel-scroll">
+            <table id="scanTable">
+                <thead>
+                    <tr>
+                        <th>Arquivo</th>
+                        <th>Status</th>
+                        <th>Bytes (Pos 10-13)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-converter" class="tab-content" style="padding: 40px; overflow-y: auto;">
+        <h2 class="text-center" style="color: var(--accent-green);">🖼️ B3D Image Converter</h2>
+
+        <div class="group-box" style="border-color: var(--accent-green); color: var(--accent-green);">
+            <h3>B3D → PNG</h3>
+            <input type="file" id="b3dInput" style="display: none;" accept=".b3d" onchange="convertB3dToPng(this)">
+            <button class="btn btn-green" style="width: 100%; padding: 15px; margin-bottom: 10px;" onclick="document.getElementById('b3dInput').click()">📂 SELECIONAR .B3D</button>
+            
+            <div id="statusB3d" class="text-center" style="color: #888; margin-bottom: 10px;">Aguardando arquivo do jogo...</div>
+            <div class="text-center">
+                <img id="previewPng" style="max-width: 100%; max-height: 200px; border: 1px solid #444; display: none;">
+            </div>
+            <button id="btnSavePng" class="btn" style="background: #ff9800; width: 100%; padding: 12px; margin-top: 10px; display: none;" onclick="savePng()">💾 SALVAR PNG</button>
+        </div>
+
+        <div class="group-box" style="border-color: var(--accent-blue); color: var(--accent-blue);">
+            <h3>PNG → B3D</h3>
+            <input type="file" id="pngInput" style="display: none;" accept=".png" onchange="convertPngToB3d(this)">
+            <button class="btn btn-blue" style="width: 100%; padding: 15px; margin-bottom: 10px;" onclick="document.getElementById('pngInput').click()">📂 SELECIONAR .PNG EDITADO</button>
+            
+            <div id="statusPng" class="text-center" style="color: #888; margin-bottom: 10px;">Aguardando imagem editada...</div>
+            <button id="btnSaveB3d" class="btn btn-blue" style="width: 100%; padding: 12px; display: none;" onclick="saveB3d()">💾 BAIXAR .B3D PARA O JOGO</button>
+        </div>
+    </div>
+
+    <div id="tab-translator" class="tab-content" style="padding: 40px; overflow-y: auto;">
+        <h2 class="text-center" style="color: #00e676;">🔤 B3D Hex Translator</h2>
+        
+        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <label style="font-weight: bold; margin-right: 10px;">Alfabeto Ativo:</label>
+            <select id="alphabetCombo" onchange="updateHexTranslations()">
+                <option value="latino">Latino (Português)</option>
+                <option value="russo">Russo (Cirílico)</option>
+            </select>
+        </div>
+
+        <div class="group-box" style="border-color: #00e676; color: #00e676;">
+            <h3>TEXTO → HEX (Para Criar Traduções)</h3>
+            <textarea id="textInput" rows="3" style="width: 100%; box-sizing: border-box;" placeholder="Ex: IR AO MENU" oninput="textToHex()"></textarea>
+            <div id="hexOutput" class="hex-display" style="color: #ffca28;">--</div>
+            <div class="small-text">Hex colado (pronto para o arquivo .b3d)</div>
+        </div>
+
+        <div class="group-box" style="border-color: #00e676; color: #00e676;">
+            <h3>HEX → TEXTO (Para Ler o Arquivo)</h3>
+            <textarea id="hexInput" rows="3" style="width: 100%; box-sizing: border-box;" placeholder="Cole ex: 0811FF00" oninput="hexToText()"></textarea>
+            <div id="textOutput" class="hex-display" style="color: #00e676; font-weight: bold;">...</div>
+        </div>
+
+        <div class="text-center small-text">A=00 | 0=1A | А=41 | Espaço=FF</div>
+    </div>
+
+    <div id="globalStatus" style="color: #888; font-size: 11px; padding: 5px;">Pronto para usar</div>
+
+    <script>
+        // ================= CONFIGURAÇÃO =================
+        const gameConfigs = {
+            'Laboratory 3D': { TABELA_INICIO: 0xCE8, TABELA_FIM: 0xD8F, TEXTO_INICIO: 0xD90, TEXTO_LIMITE: 0x1423, color: '#4caf50' },
+            'Bunker 3D': { TABELA_INICIO: 0x438, TABELA_FIM: 0x4C4, TEXTO_INICIO: 0x4C5, TEXTO_LIMITE: 0x1200, color: '#4caf50' },
+            'Castle 3D': { TABELA_INICIO: 0xEAC, TABELA_FIM: 0xF50, TEXTO_INICIO: 0xF51, TEXTO_LIMITE: 0x1FFF, color: '#d32f2f' }
+        };
+
+        const mapaNovoBypass = {
+            '0': 0x00, '1': 0x01, '2': 0x02, '3': 0x03, '4': 0x04, '5': 0x05, 
+            '6': 0x06, '7': 0x07, '8': 0x08, '9': 0x09, 'A': 0x0A, 'B': 0x0B, 
+            'C': 0x0C, 'D': 0x0D, 'E': 0x0E, 'F': 0x0F, 'G': 0x10, 'H': 0x11, 
+            'I': 0x12, 'J': 0x13, 'K': 0x14, 'L': 0x15, 'M': 0x16, 'N': 0x17, 
+            'O': 0x18, 'P': 0x19, 'R': 0x1A, 'S': 0x1B, 'T': 0x1C, 'U': 0x1D, 
+            'V': 0x1E, 'X': 0x1F, 'Z': 0x20, ' ': 0x24, '-': 0x2A, '.': 0x2B, 
+            '(': 0x2C, ')': 0x2D, ',': 0x2E, ':': 0x32, '?': 0x33, '!': 0x34
+        };
+
+        const charToByte = {
+            '0': 0x00, '1': 0x01, '2': 0x02, '3': 0x03, '4': 0x04, '5': 0x05, 
+            '6': 0x06, '7': 0x07, '8': 0x08, '9': 0x09, 'А': 0x0A, 'Б': 0x0B, 
+            'В': 0x0C, 'Г': 0x0D, 'Д': 0x0E, 'Е': 0x0F, 'Ж': 0x10, 'З': 0x11, 
+            'И': 0x12, 'Й': 0x13, 'К': 0x14, 'Л': 0x15, 'М': 0x16, 'Н': 0x17, 
+            'О': 0x18, 'П': 0x19, 'Р': 0x1A, 'С': 0x1B, 'Т': 0x1C, 'У': 0x1D, 
+            'Ф': 0x1E, 'Х': 0x1F, 'Ц': 0x20, 'Ч': 0x21, 'Ш': 0x22, 'Щ': 0x23, 
+            ' ': 0x24, 'Ы': 0x25, 'Ь': 0x26, 'Э': 0x27, 'Ю': 0x28, 'Я': 0x29, 
+            '-': 0x2A, '.': 0x2B, '(': 0x2C, ')': 0x2D, ',': 0x2E, "'": 0x2F, 
+            '#': 0x31, ':': 0x32, '?': 0x33, '!': 0x34
+        };
+        // Invertendo charToByte
+        const byteToChar = Object.fromEntries(Object.entries(charToByte).map(([k, v]) => [v, k]));
+
+        const bypassMap = {
+            'A': 'А', 'B': 'Б', 'C': 'С', 'D': 'Д', 'E': 'Е', 'F': 'Ф', 'G': 'Г', 
+            'H': 'Н', 'I': 'И', 'J': 'Й', 'K': 'К', 'L': 'Л', 'M': 'М', 'N': 'Н', 
+            'O': 'О', 'P': 'П', 'Q': 'К', 'R': 'Р', 'S': 'С', 'T': 'Т', 'U': 'У', 
+            'V': 'В', 'X': 'Х', 'Y': 'У', 'Z': 'Ц', ' ': ' ', '.': '.', '!': '!', 
+            '?': '?', ':': ':', '-': '-', '(': '(', ')': ')', ',': ','
+        };
+
+        const mapaOriginal = {
+            0x00: '0', 0x01: '1', 0x02: '2', 0x03: '3', 0x04: '4', 0x05: '5', 
+            0x06: '6', 0x07: '7', 0x08: '8', 0x09: '9', 0x0A: 'A', 0x0B: 'B', 
+            0x0C: 'C', 0x0D: 'D', 0x0E: 'E', 0x0F: 'F', 0x10: 'G', 0x11: 'H',
+            0x12: 'I', 0x13: 'J', 0x14: 'K', 0x15: 'L', 0x16: 'M', 0x17: 'N', 
+            0x18: 'O', 0x19: 'P', 0x1A: 'R', 0x1B: 'S', 0x1C: 'T', 0x1D: 'U', 
+            0x1E: 'V', 0x1F: 'X', 0x20: 'Z', 0x24: ' ', 0x2A: '-', 0x2B: '.',
+            0x2C: '(', 0x2D: ')', 0x2E: ',', 0x32: ':', 0x33: '?', 0x34: '!'
+        };
+
+        const latinoMap = {
+            'A':'00','B':'01','C':'02','D':'03','E':'04','F':'05','G':'06','H':'07',
+            'I':'08','J':'09','K':'0A','L':'0B','M':'0C','N':'0D','O':'0E','P':'0F',
+            'Q':'10','R':'11','S':'12','T':'13','U':'14','V':'15','W':'16','X':'17',
+            'Y':'18','Z':'19','0':'1A','1':'1B','2':'1C','3':'1D','4':'1E','5':'1F',
+            '6':'20','7':'21','8':'22','9':'23',' ':'FF','.':'24','!':'29','?':'28'
+        };
+
+        const russoMap = {
+            'А':'40','Б':'41','В':'42','Г':'43','Д':'44','Е':'45','Ж':'46','З':'47',
+            'И':'48','Й':'49','К':'4A','Л':'4B','M':'4C','Н':'4D','О':'4E','П':'4F',
+            'Р':'50','С':'51','Т':'52','У':'53','Ф':'54','Х':'55','Ц':'56','Ч':'57',
+            'Ш':'58','Щ':'59','Ъ':'5A','Ы':'5B','Ь':'5C','Э':'5D','Ю':'5E','Я':'5F',
+            ' ':'FF'
+        };
+
+        // Estado Global
+        let currentGame = 'Laboratory 3D';
+        let originalBuffer = null;
+        let originalB3dHeader = null;
+        let convertedPngData = null;
+        let convertedB3dData = null;
+        let pngFilename = "";
+        let b3dFilename = "";
+        let invalidFiles = [];
+
+        // ================= FUNÇÕES UI =================
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            // Encontra o botão correspondente
+            const buttons = document.querySelectorAll('.tab-button');
+            if (tabId === 'tab-editor') buttons[0].classList.add('active');
+            if (tabId === 'tab-scanner') buttons[1].classList.add('active');
+            if (tabId === 'tab-converter') buttons[2].classList.add('active');
+            if (tabId === 'tab-translator') buttons[3].classList.add('active');
+        }
+
+        function setStatus(msg) {
+            document.getElementById('globalStatus').innerText = msg;
+        }
+
+        function changeGame() {
+            currentGame = document.getElementById('gameSelector').value;
+            if (originalBuffer) {
+                renderNormalView();
+                renderBypassEditor();
+            }
+            setStatus(`✅ Jogo alterado para: ${currentGame}`);
+        }
+
+        // ================= EDITOR LOGIC =================
+        function loadFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                originalBuffer = new Uint8Array(e.target.result);
+                renderNormalView();
+                renderBypassEditor();
+                setStatus(`✅ ${currentGame} carregado: ${file.name}`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderNormalView() {
+            const container = document.getElementById('normalViewContainer');
+            container.innerHTML = '';
+            
+            const config = gameConfigs[currentGame];
+            let cursorTexto = config.TEXTO_INICIO;
+
+            for (let i = config.TABELA_INICIO; i <= config.TABELA_FIM; i++) {
+                const tamanho = originalBuffer[i];
+                if (tamanho === 0) continue;
+
+                let frase = "";
+                for (let j = 0; j < tamanho; j++) {
+                    if (cursorTexto < originalBuffer.length) {
+                        const byteVal = originalBuffer[cursorTexto];
+                        frase += byteToChar[byteVal] || '?';
+                        cursorTexto++;
+                    }
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'editor-item';
+                
+                // Header
+                const header = document.createElement('div');
+                header.className = 'id-label';
+                header.style.color = config.color;
+                header.innerText = `ID: 0x${i.toString(16).toUpperCase().padStart(3, '0')}`;
+                
+                // Input
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'game-input';
+                input.value = frase;
+                
+                // Preview Logic
+                const previewLabel = document.createElement('div');
+                previewLabel.className = 'small-text';
+                previewLabel.innerText = "Preview no jogo:";
+                previewLabel.style.marginTop = '5px';
+
+                const previewBox = document.createElement('div');
+                previewBox.className = 'preview-box';
+                previewBox.innerText = transformPreview(frase);
+
+                input.addEventListener('input', (e) => {
+                    previewBox.innerText = transformPreview(e.target.value);
+                });
+
+                itemDiv.appendChild(header);
+                itemDiv.appendChild(input);
+                itemDiv.appendChild(previewLabel);
+                itemDiv.appendChild(previewBox);
+                container.appendChild(itemDiv);
+            }
+        }
+
+        function renderBypassEditor() {
+            const container = document.getElementById('bypassEditorContainer');
+            container.innerHTML = '';
+
+            const config = gameConfigs[currentGame];
+            let cursorTexto = config.TEXTO_INICIO;
+
+            for (let i = config.TABELA_INICIO; i <= config.TABELA_FIM; i++) {
+                const tamanho = originalBuffer[i];
+                if (tamanho === 0) continue;
+
+                let original = "";
+                for (let j = 0; j < tamanho; j++) {
+                    if (cursorTexto < originalBuffer.length) {
+                        const byteVal = originalBuffer[cursorTexto];
+                        original += mapaOriginal[byteVal] || '?';
+                        cursorTexto++;
+                    }
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'editor-item bypass';
+
+                const header = document.createElement('div');
+                header.className = 'id-label';
+                header.style.color = 'var(--accent-blue)';
+                header.innerText = `ID: 0x${i.toString(16).toUpperCase().padStart(3, '0')}`;
+
+                const origLabel = document.createElement('div');
+                origLabel.className = 'small-text';
+                origLabel.innerText = 'Original:';
+
+                const origText = document.createElement('div');
+                origText.className = 'original-text';
+                origText.innerText = original;
+
+                const editLabel = document.createElement('div');
+                editLabel.className = 'small-text';
+                editLabel.innerText = 'Tradução (Bypass):';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'bypass-input';
+                input.value = original;
+                input.dataset.offset = i; // Armazena o offset do ID
+
+                itemDiv.appendChild(header);
+                itemDiv.appendChild(origLabel);
+                itemDiv.appendChild(origText);
+                itemDiv.appendChild(editLabel);
+                itemDiv.appendChild(input);
+                container.appendChild(itemDiv);
+            }
+        }
+
+        function transformPreview(text) {
+            let result = "";
+            text = text.toUpperCase();
+            for (let char of text) {
+                result += bypassMap[char] || char;
+            }
+            return result;
+        }
+
+        function saveFile() {
+            if (!originalBuffer) {
+                alert("Carregue um arquivo primeiro!");
+                return;
+            }
+
+            try {
+                // Clona o buffer original
+                let novoBuffer = new Uint8Array(originalBuffer);
+                const config = gameConfigs[currentGame];
+                let cursorTexto = config.TEXTO_INICIO;
+
+                // Itera sobre os inputs do Bypass Editor
+                const inputs = document.querySelectorAll('#bypassEditorContainer .bypass-input');
+                
+                inputs.forEach(input => {
+                    const offset = parseInt(input.dataset.offset);
+                    let texto = input.value.toUpperCase();
+
+                    // Substituições especiais
+                    texto = texto.replace(/Á/g, 'A').replace(/É/g, 'E').replace(/Í/g, 'I');
+                    texto = texto.replace(/Ó/g, 'O').replace(/Ú/g, 'U').replace(/Ã/g, 'A');
+                    texto = texto.replace(/Õ/g, 'O').replace(/Ç/g, 'C');
+
+                    // Atualiza tamanho na tabela
+                    novoBuffer[offset] = texto.length;
+
+                    // Escreve os bytes
+                    for (let char of texto) {
+                        if (cursorTexto > config.TEXTO_LIMITE) break;
+                        const byteVal = mapaNovoBypass[char] !== undefined ? mapaNovoBypass[char] : 0x24;
+                        novoBuffer[cursorTexto] = byteVal;
+                        cursorTexto++;
+                    }
+                });
+
+                // Download
+                const blob = new Blob([novoBuffer], { type: "application/octet-stream" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${currentGame.replace(' ', '_')}_TRADUZIDO.bin`;
+                a.click();
+                URL.revokeObjectURL(url);
+                setStatus("✅ Tradução salva!");
+            } catch (e) {
+                alert("Erro ao salvar: " + e.message);
+            }
+        }
+
+        function exportJson() {
+            if (!originalBuffer) {
+                alert("Carregue um arquivo primeiro!");
+                return;
+            }
+
+            const inputs = document.querySelectorAll('#bypassEditorContainer .bypass-input');
+            const data = { game: currentGame, texts: [] };
+
+            inputs.forEach(input => {
+                data.texts.push({
+                    id: "0x" + parseInt(input.dataset.offset).toString(16),
+                    t: input.value
+                });
+            });
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${currentGame.replace(' ', '_')}_projeto.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importJson(input) {
+            if (!originalBuffer) {
+                alert("Carregue um arquivo BIN primeiro!");
+                return;
+            }
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const dados = JSON.parse(e.target.result);
+                    if (dados.game && dados.game !== currentGame) {
+                        if (!confirm(`Este JSON é para '${dados.game}', mas o jogo atual é '${currentGame}'. Continuar?`)) return;
+                    }
+
+                    const texts = dados.texts || dados;
+                    
+                    const inputs = document.querySelectorAll('#bypassEditorContainer .bypass-input');
+                    texts.forEach(item => {
+                        const offset = parseInt(item.id, 16);
+                        // Encontra o input correspondente
+                        for (let inp of inputs) {
+                            if (parseInt(inp.dataset.offset) === offset) {
+                                inp.value = item.t;
+                                break;
+                            }
+                        }
+                    });
+                    setStatus("✅ JSON importado com sucesso");
+                } catch (err) {
+                    alert("Erro ao importar JSON: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ================= SCANNER LOGIC =================
+        const invalidFileObjects = []; // Stores actual File objects
+
+        function scanFiles(input) {
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            const tableBody = document.querySelector('#scanTable tbody');
+            const targetSig = [0x49, 0x48, 0x44, 0x52]; // IHDR
+            const offset = 10;
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const header = data.slice(offset, offset + 4);
+                    let isValid = true;
+                    
+                    if (header.length !== 4) isValid = false;
+                    else {
+                        for(let i=0; i<4; i++) {
+                            if (header[i] !== targetSig[i]) isValid = false;
+                        }
+                    }
+
+                    if (!isValid) {
+                        invalidFiles.push(file.name);
+                        invalidFileObjects.push(file);
+                    }
+
+                    // Add Row
+                    const row = tableBody.insertRow();
+                    const cellName = row.insertCell(0);
+                    const cellStatus = row.insertCell(1);
+                    const cellBytes = row.insertCell(2);
+
+                    cellName.innerText = file.name;
+                    cellStatus.innerText = isValid ? "OK (IHDR)" : "INVÁLIDO";
+                    cellStatus.style.color = isValid ? "#00e676" : "#ff1744";
+                    cellStatus.style.fontWeight = "bold";
+                    
+                    cellBytes.innerText = Array.from(header).map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+                    
+                    // Update Button
+                    const btnZip = document.getElementById('btnDownloadZip');
+                    if (invalidFiles.length > 0) {
+                        btnZip.disabled = false;
+                        btnZip.innerText = `💾 Baixar ${invalidFiles.length} Inválidos (.zip)`;
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function downloadInvalidZip() {
+            if (invalidFileObjects.length === 0) return;
+            
+            const zip = new JSZip();
+            let processed = 0;
+
+            invalidFileObjects.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    zip.file(file.name, e.target.result);
+                    processed++;
+                    if (processed === invalidFileObjects.length) {
+                        zip.generateAsync({type:"blob"}).then(function(content) {
+                            const url = URL.createObjectURL(content);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = "arquivos_sem_assinatura.zip";
+                            a.click();
+                        });
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function clearScan() {
+            document.querySelector('#scanTable tbody').innerHTML = '';
+            invalidFiles = [];
+            invalidFileObjects.length = 0;
+            const btnZip = document.getElementById('btnDownloadZip');
+            btnZip.disabled = true;
+            btnZip.innerText = "💾 Baixar Inválidos (.zip)";
+        }
+
+        // ================= CONVERTER LOGIC =================
+        function convertB3dToPng(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                originalB3dHeader = data.slice(0, 14);
+                pngFilename = file.name.replace('.b3d', '.png');
+
+                const pngHeader = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52]);
+                
+                // Constrói novo array: PNG Header (16 bytes) + Dados (do byte 14 em diante)
+                const body = data.slice(14);
+                const pngData = new Uint8Array(pngHeader.length + body.length);
+                pngData.set(pngHeader);
+                pngData.set(body, pngHeader.length);
+                
+                convertedPngData = pngData;
+
+                // Preview
+                const blob = new Blob([pngData], {type: "image/png"});
+                document.getElementById('previewPng').src = URL.createObjectURL(blob);
+                document.getElementById('previewPng').style.display = 'inline-block';
+                document.getElementById('btnSavePng').style.display = 'block';
+                document.getElementById('statusB3d').innerText = "✅ PNG gerado com header original preservado!";
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function savePng() {
+            if (!convertedPngData) return;
+            const blob = new Blob([convertedPngData], {type: "image/png"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = pngFilename;
+            a.click();
+        }
+
+        function convertPngToB3d(input) {
+            if (!originalB3dHeader) {
+                alert("Você precisa converter um .B3D antes para capturar o header original!");
+                return;
+            }
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const pngData = new Uint8Array(e.target.result);
+                b3dFilename = file.name.replace('.png', '.b3d');
+
+                // Remove 16 bytes do PNG Header e adiciona os 14 bytes do B3D Header original
+                const body = pngData.slice(16);
+                const b3dData = new Uint8Array(originalB3dHeader.length + body.length);
+                b3dData.set(originalB3dHeader);
+                b3dData.set(body, originalB3dHeader.length);
+
+                convertedB3dData = b3dData;
+
+                document.getElementById('btnSaveB3d').style.display = 'block';
+                document.getElementById('statusPng').innerText = "✅ B3D reconstruído com header original!";
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function saveB3d() {
+            if (!convertedB3dData) return;
+            const blob = new Blob([convertedB3dData], {type: "application/octet-stream"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = b3dFilename;
+            a.click();
+        }
+
+        // ================= TRANSLATOR LOGIC =================
+        function textToHex() {
+            const text = document.getElementById('textInput').value.toUpperCase();
+            const type = document.getElementById('alphabetCombo').value;
+            const table = type === 'latino' ? latinoMap : russoMap;
+
+            let result = [];
+            for (let char of text) {
+                result.push(table[char] || 'FF');
+            }
+            document.getElementById('hexOutput').innerText = result.join('');
+        }
+
+        function hexToText() {
+            const hexInput = document.getElementById('hexInput').value.replace(/\s+/g, '').toUpperCase();
+            const type = document.getElementById('alphabetCombo').value;
+            const table = type === 'latino' ? latinoMap : russoMap;
+            
+            // Invertendo tabela
+            const invTable = Object.fromEntries(Object.entries(table).map(([k, v]) => [v, k]));
+
+            let result = "";
+            for (let i = 0; i < hexInput.length; i += 2) {
+                const pair = hexInput.substring(i, i + 2);
+                if (pair.length === 2) {
+                    result += invTable[pair] || '?';
+                }
+            }
+            document.getElementById('textOutput').innerText = result;
+        }
+
+        function updateHexTranslations() {
+            textToHex();
+            hexToText();
+        }
+    </script>
+</body>
+</html>
