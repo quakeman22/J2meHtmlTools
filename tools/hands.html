@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HandsOn Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #F5F7FA;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .toolbar {
+            background-color: #34495E;
+            padding: 10px 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn {
+            background-color: #3498DB;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #2980B9;
+        }
+
+        .btn.success {
+            background-color: #27AE60;
+        }
+
+        .btn.success:hover {
+            background-color: #229954;
+        }
+
+        .divider {
+            width: 2px;
+            height: 30px;
+            background-color: #7F8C8D;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #FFFFFF;
+            margin: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .welcome {
+            text-align: center;
+            padding: 80px 20px;
+            color: #7F8C8D;
+            font-size: 18px;
+        }
+
+        .string-item {
+            background-color: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .item-header {
+            background-color: #F8F9FA;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-index {
+            font-size: 12px;
+            font-weight: bold;
+            color: #7F8C8D;
+        }
+
+        .copy-btn {
+            background-color: #ECF0F1;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .copy-btn:hover {
+            background-color: #D5DBDB;
+        }
+
+        .item-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 12px;
+        }
+
+        .text-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .text-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 60px;
+            padding: 8px;
+            border: 1px solid #D5D8DC;
+            border-radius: 4px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .text-area:focus {
+            outline: none;
+            border-color: #3498DB;
+        }
+
+        .text-area.readonly {
+            background-color: #F8F9FA;
+            color: #555;
+        }
+
+        .status-bar {
+            background-color: #2C3E50;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="btn" onclick="openFile()">📁 Abrir</button>
+        <button class="btn success" onclick="saveFile()">💾 Salvar</button>
+        <div class="divider"></div>
+        <button class="btn" onclick="exportJSON()">📤 Exportar JSON</button>
+        <button class="btn" onclick="importJSON()">📥 Importar JSON</button>
+        <div class="divider"></div>
+        <button class="btn" onclick="exportCSV()">📤 Exportar CSV</button>
+        <button class="btn" onclick="importCSV()">📥 Importar CSV</button>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="welcome" id="welcome">
+            📁 Abra um arquivo para começar
+        </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">Pronto</div>
+
+    <!-- Modal para alertas -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitle">Aviso</div>
+            <div id="modalMessage"></div>
+            <div class="modal-buttons">
+                <button class="btn" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" class="hidden" accept="*.*">
+    <input type="file" id="jsonInput" class="hidden" accept=".json">
+    <input type="file" id="csvInput" class="hidden" accept=".csv">
+
+    <script>
+        let fileData = null;
+        let originalFileName = null;
+
+        class HandsOnString {
+            constructor(shortId, text) {
+                this.shortId = shortId;
+                this.text = text;
+            }
+        }
+
+        class HandsOnFile {
+            constructor(initialFileSize, skipBytes, strings) {
+                this.initialFileSize = initialFileSize;
+                this.skipBytes = skipBytes;
+                this.strings = strings;
+            }
+        }
+
+        // Funções auxiliares para leitura de bytes
+        function readUInt32BE(buffer, offset) {
+            return (buffer[offset] << 24) | (buffer[offset + 1] << 16) | 
+                   (buffer[offset + 2] << 8) | buffer[offset + 3];
+        }
+
+        function readUInt16BE(buffer, offset) {
+            return (buffer[offset] << 8) | buffer[offset + 1];
+        }
+
+        function writeUInt32BE(value) {
+            return [
+                (value >> 24) & 0xFF,
+                (value >> 16) & 0xFF,
+                (value >> 8) & 0xFF,
+                value & 0xFF
+            ];
+        }
+
+        function writeUInt16BE(value) {
+            return [
+                (value >> 8) & 0xFF,
+                value & 0xFF
+            ];
+        }
+
+        // Carregar arquivo binário
+        function loadHandsOnFile(arrayBuffer) {
+            const buffer = new Uint8Array(arrayBuffer);
+            let offset = 0;
+
+            const initialFileSize = readUInt32BE(buffer, offset);
+            offset += 4;
+
+            const skipBytes = readUInt32BE(buffer, offset);
+            offset += 4;
+
+            if (skipBytes > 0) {
+                offset += skipBytes;
+            }
+
+            const strings = [];
+            while (offset < buffer.length) {
+                if (offset + 2 > buffer.length) break;
+
+                const shortId = readUInt16BE(buffer, offset);
+                offset += 2;
+
+                if (offset + 2 > buffer.length) break;
+
+                const length = readUInt16BE(buffer, offset);
+                offset += 2;
+
+                if (offset + length > buffer.length) break;
+
+                const textBytes = buffer.slice(offset, offset + length);
+                const text = new TextDecoder('utf-8').decode(textBytes);
+                offset += length;
+
+                strings.push(new HandsOnString(shortId, text));
+            }
+
+            return new HandsOnFile(initialFileSize, skipBytes, strings);
+        }
+
+        // Salvar arquivo binário
+        function saveHandsOnFile(fileData, translatedTexts) {
+            const newStrings = fileData.strings.map((original, i) => 
+                new HandsOnString(original.shortId, translatedTexts[i])
+            );
+
+            // Calcular tamanho necessário
+            let totalSize = 8; // 2 * 4 bytes para cabeçalho
+            let offset = fileData.skipBytes;
+
+            // Espaço para offsets
+            totalSize += (newStrings.length - 1) * 4;
+
+            // Espaço para strings
+            for (const s of newStrings) {
+                const textBytes = new TextEncoder().encode(s.text);
+                totalSize += 2 + 2 + textBytes.length; // shortId + length + text
+            }
+
+            const buffer = new Uint8Array(totalSize);
+            let pos = 0;
+
+            // Escrever placeholder para file size
+            buffer.set(writeUInt32BE(0), pos);
+            pos += 4;
+
+            // Escrever skip bytes
+            buffer.set(writeUInt32BE(fileData.skipBytes), pos);
+            pos += 4;
+
+            // Escrever offsets
+            for (let i = 0; i < newStrings.length - 1; i++) {
+                const textBytes = new TextEncoder().encode(newStrings[i].text);
+                offset += textBytes.length;
+                buffer.set(writeUInt32BE(offset), pos);
+                pos += 4;
+            }
+
+            // Escrever strings
+            for (const s of newStrings) {
+                buffer.set(writeUInt16BE(s.shortId), pos);
+                pos += 2;
+
+                const textBytes = new TextEncoder().encode(s.text);
+                buffer.set(writeUInt16BE(textBytes.length), pos);
+                pos += 2;
+
+                buffer.set(textBytes, pos);
+                pos += textBytes.length;
+            }
+
+            // Atualizar file size
+            const fileSize = buffer.length - 4;
+            buffer.set(writeUInt32BE(fileSize), 0);
+
+            return buffer;
+        }
+
+        // Abrir arquivo
+        function openFile() {
+            const input = document.getElementById('fileInput');
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                originalFileName = file.name;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        fileData = loadHandsOnFile(event.target.result);
+                        displayTranslations();
+                        updateStatus(`✅ ${fileData.strings.length} strings carregadas`);
+                    } catch (error) {
+                        showModal('Erro', `Erro ao carregar: ${error.message}`);
+                        updateStatus('❌ Erro ao carregar');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+            input.click();
+        }
+
+        // Exibir traduções
+        function displayTranslations() {
+            const mainContent = document.getElementById('mainContent');
+            const welcome = document.getElementById('welcome');
+            
+            welcome.style.display = 'none';
+            mainContent.innerHTML = '';
+
+            fileData.strings.forEach((stringObj, i) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'string-item';
+
+                itemDiv.innerHTML = `
+                    <div class="item-header">
+                        <span class="item-index">[${i + 1}/${fileData.strings.length}]</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(stringObj.text)}')">📋 Copiar</button>
+                    </div>
+                    <div class="item-content">
+                        <div class="text-section">
+                            <label class="text-label">Original:</label>
+                            <textarea class="text-area readonly" readonly>${escapeHtml(stringObj.text)}</textarea>
+                        </div>
+                        <div class="text-section">
+                            <label class="text-label">Tradução:</label>
+                            <textarea class="text-area" data-index="${i}">${escapeHtml(stringObj.text)}</textarea>
+                        </div>
+                    </div>
+                `;
+
+                mainContent.appendChild(itemDiv);
+            });
+        }
+
+        // Copiar para clipboard
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = unescapeHtml(text);
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            updateStatus('📋 Copiado!');
+            setTimeout(() => updateStatus('Pronto'), 1500);
+        }
+
+        // Salvar arquivo
+        function saveFile() {
+            if (!fileData) {
+                showModal('Aviso', 'Carregue um arquivo primeiro.');
+                return;
+            }
+
+            const translatedTexts = [];
+            const textareas = document.querySelectorAll('.text-area:not(.readonly)');
+            textareas.forEach(textarea => {
+                translatedTexts.push(textarea.value.trim());
+            });
+
+            try {
+                const buffer = saveHandsOnFile(fileData, translatedTexts);
+                const blob = new Blob([buffer], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = originalFileName || 'translated.bin';
+                a.click();
+                URL.revokeObjectURL(url);
+                showModal('Sucesso', 'Arquivo salvo!');
+                updateStatus('✅ Salvo com sucesso');
+            } catch (error) {
+                showModal('Erro', `Erro ao salvar: ${error.message}`);
+                updateStatus('❌ Erro ao salvar');
+            }
+        }
+
+        // Exportar JSON
+        function exportJSON() {
+            if (!fileData) {
+                showModal('Aviso', 'Carregue um arquivo primeiro.');
+                return;
+            }
+
+            const translatedTexts = [];
+            const textareas = document.querySelectorAll('.text-area:not(.readonly)');
+            textareas.forEach(textarea => {
+                translatedTexts.push(textarea.value.trim());
+            });
+
+            const data = {
+                strings: fileData.strings.map((s, i) => ({
+                    index: i,
+                    original: s.text,
+                    translation: translatedTexts[i]
+                }))
+            };
+
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'translations.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showModal('Sucesso', 'JSON exportado!');
+            updateStatus('✅ JSON exportado');
+        }
+
+        // Importar JSON
+        function importJSON() {
+            if (!fileData) {
+                showModal('Aviso', 'Carregue um arquivo primeiro.');
+                return;
+            }
+
+            const input = document.getElementById('jsonInput');
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (!data.strings) {
+                            throw new Error('Formato JSON inválido');
+                        }
+
+                        const textareas = document.querySelectorAll('.text-area:not(.readonly)');
+                        data.strings.forEach(item => {
+                            if (item.index < textareas.length) {
+                                textareas[item.index].value = item.translation;
+                            }
+                        });
+
+                        showModal('Sucesso', 'JSON importado!');
+                        updateStatus('✅ JSON importado');
+                    } catch (error) {
+                        showModal('Erro', `Erro ao importar: ${error.message}`);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Exportar CSV
+        function exportCSV() {
+            if (!fileData) {
+                showModal('Aviso', 'Carregue um arquivo primeiro.');
+                return;
+            }
+
+            const translatedTexts = [];
+            const textareas = document.querySelectorAll('.text-area:not(.readonly)');
+            textareas.forEach(textarea => {
+                translatedTexts.push(textarea.value.trim());
+            });
+
+            let csv = '\uFEFF'; // BOM para UTF-8
+            csv += 'Index;Original;Tradução\n';
+
+            fileData.strings.forEach((s, i) => {
+                const original = s.text.replace(/"/g, '""');
+                const translation = translatedTexts[i].replace(/"/g, '""');
+                csv += `${i};"${original}";"${translation}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'translations.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            showModal('Sucesso', 'CSV exportado!');
+            updateStatus('✅ CSV exportado');
+        }
+
+        // Importar CSV
+        function importCSV() {
+            if (!fileData) {
+                showModal('Aviso', 'Carregue um arquivo primeiro.');
+                return;
+            }
+
+            const input = document.getElementById('csvInput');
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const csv = event.target.result;
+                        const lines = csv.split('\n');
+                        const textareas = document.querySelectorAll('.text-area:not(.readonly)');
+
+                        // Pular cabeçalho
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line) continue;
+
+                            const match = line.match(/^(\d+);(".*?"|[^;]*);(".*?"|[^;]*)$/);
+                            if (match) {
+                                const index = parseInt(match[1]);
+                                let translation = match[3];
+                                
+                                // Remover aspas se presentes
+                                if (translation.startsWith('"') && translation.endsWith('"')) {
+                                    translation = translation.slice(1, -1).replace(/""/g, '"');
+                                }
+
+                                if (index < textareas.length) {
+                                    textareas[index].value = translation;
+                                }
+                            }
+                        }
+
+                        showModal('Sucesso', 'CSV importado!');
+                        updateStatus('✅ CSV importado');
+                    } catch (error) {
+                        showModal('Erro', `Erro ao importar: ${error.message}`);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Funções auxiliares
+        function updateStatus(message) {
+            document.getElementById('statusBar').textContent = message;
+        }
+
+        function showModal(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function unescapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerHTML = text;
+            return div.textContent;
+        }
+
+        // Fechar modal ao clicar fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
