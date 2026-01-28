@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangEditor v1.1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .menubar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 8px 0;
+            display: flex;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .menu {
+            position: relative;
+            padding: 8px 15px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .menu:hover {
+            background-color: #34495e;
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: white;
+            color: black;
+            min-width: 200px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .menu-dropdown.show {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .menu-item:hover {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .menu-separator {
+            height: 1px;
+            background-color: #ddd;
+            margin: 5px 0;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        .path-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .path-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .path-value {
+            flex: 1;
+            padding: 5px 10px;
+            background-color: #ecf0f1;
+            border-radius: 3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-list-container {
+            flex: 1;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-item:hover {
+            background-color: #e9ecef;
+        }
+
+        .file-item.selected {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .button-bar {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #ddd;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .modal-body {
+            margin: 15px 0;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .string-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .string-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .string-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .string-item.selected {
+            background-color: #d4e6f1;
+        }
+
+        .text-editor {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .info-text {
+            padding: 15px;
+            background-color: #e8f4f8;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .img-preview {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Bar -->
+    <div class="menubar">
+        <div class="menu" onclick="toggleMenu('fileMenu')">
+            Arquivo
+            <div id="fileMenu" class="menu-dropdown">
+                <div class="menu-item" onclick="openFolderDialog(); closeMenus();">Abrir Pasta</div>
+                <div class="menu-separator"></div>
+                <div class="menu-item" onclick="window.close(); closeMenus();">Sair</div>
+            </div>
+        </div>
+        <div class="menu" onclick="toggleMenu('toolsMenu')">
+            Ferramentas
+            <div id="toolsMenu" class="menu-dropdown">
+                <div class="menu-item" onclick="netlizardCipher(); closeMenus();">Cifrar/Decifrar NetLizard</div>
+                <div class="menu-item" onclick="fishlabsCipher(); closeMenus();">Cifrar/Decifrar Fishlabs</div>
+                <div class="menu-item" onclick="changeFileSize(); closeMenus();">Alterar Tamanho</div>
+            </div>
+        </div>
+        <div class="menu" onclick="toggleMenu('helpMenu')">
+            Ajuda
+            <div id="helpMenu" class="menu-dropdown">
+                <div class="menu-item" onclick="showAbout(); closeMenus();">Sobre</div>
+                <div class="menu-item" onclick="showHelp(); closeMenus();">Ajuda</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <div class="path-section">
+            <span class="path-label">Caminho:</span>
+            <div class="path-value" id="pathValue">Nenhuma pasta selecionada</div>
+        </div>
+
+        <div class="file-list-container">
+            <div class="file-list" id="fileList">
+                <div style="text-align: center; padding: 50px; color: #7f8c8d;">
+                    📁 Use "Arquivo → Abrir Pasta" para começar
+                </div>
+            </div>
+        </div>
+
+        <div class="button-bar">
+            <button class="btn" onclick="openSelectedFile()">Abrir</button>
+            <button class="btn" onclick="editSelectedFile()">Editar</button>
+            <button class="btn" onclick="refreshFileList()">Atualizar</button>
+        </div>
+    </div>
+
+    <!-- Modal Genérico -->
+    <div id="mainModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitle"></div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter"></div>
+        </div>
+    </div>
+
+    <!-- Inputs ocultos -->
+    <input type="file" id="folderInput" class="hidden" webkitdirectory directory multiple>
+    <input type="file" id="fileInput" class="hidden">
+
+    <script>
+        let currentFiles = [];
+        let currentPath = '';
+        let selectedFileIndex = -1;
+        let fileData = [];
+        let currentEditFile = null;
+
+        const fileIcons = {
+            'lang': '📝', 'lng': '📝', 'class': '☕',
+            'bin': '⚙️', 'txt': '📄',
+            'png': '🖼️', 'jpg': '🖼️', 'jpeg': '🖼️',
+            'gif': '🖼️', 'bmp': '🖼️'
+        };
+
+        // Menu functions
+        function toggleMenu(menuId) {
+            closeMenus();
+            const menu = document.getElementById(menuId);
+            if (menu) {
+                menu.classList.add('show');
+            }
+        }
+
+        function closeMenus() {
+            document.querySelectorAll('.menu-dropdown').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu')) {
+                closeMenus();
+            }
+        });
+
+        // File system functions
+        function openFolderDialog() {
+            const input = document.getElementById('folderInput');
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    currentFiles = files;
+                    currentPath = files[0].webkitRelativePath.split('/')[0];
+                    refreshFileList();
+                }
+            };
+            input.click();
+        }
+
+        function refreshFileList() {
+            const fileList = document.getElementById('fileList');
+            const pathValue = document.getElementById('pathValue');
+            
+            fileList.innerHTML = '';
+            pathValue.textContent = currentPath || 'Nenhuma pasta selecionada';
+
+            if (currentFiles.length === 0) {
+                fileList.innerHTML = '<div style="text-align: center; padding: 50px; color: #7f8c8d;">📁 Use "Arquivo → Abrir Pasta" para começar</div>';
+                return;
+            }
+
+            // Organizar arquivos
+            const folders = new Set();
+            const files = [];
+
+            currentFiles.forEach(file => {
+                const parts = file.webkitRelativePath.split('/');
+                if (parts.length > 1) {
+                    folders.add(parts[1]);
+                }
+                if (parts.length === 2) {
+                    files.push({ name: file.name, file: file });
+                }
+            });
+
+            // Adicionar pastas
+            folders.forEach(folder => {
+                const item = createFileItem(`📁 ${folder}`, -1, true);
+                fileList.appendChild(item);
+            });
+
+            // Adicionar arquivos
+            files.forEach((fileObj, index) => {
+                const ext = fileObj.name.split('.').pop().toLowerCase();
+                const icon = fileIcons[ext] || '📄';
+                const item = createFileItem(`${icon} ${fileObj.name}`, index, false, fileObj.file);
+                fileList.appendChild(item);
+            });
+        }
+
+        function createFileItem(text, index, isFolder, fileObj) {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.textContent = text;
+            
+            if (!isFolder) {
+                item.onclick = () => selectFile(index);
+                item.ondblclick = () => openFile(fileObj);
+            }
+            
+            return item;
+        }
+
+        function selectFile(index) {
+            selectedFileIndex = index;
+            document.querySelectorAll('.file-item').forEach((item, i) => {
+                item.classList.toggle('selected', i === index);
+            });
+        }
+
+        function openSelectedFile() {
+            if (selectedFileIndex < 0) {
+                showAlert('Aviso', 'Selecione um arquivo');
+                return;
+            }
+            const files = currentFiles.filter(f => f.webkitRelativePath.split('/').length === 2);
+            openFile(files[selectedFileIndex]);
+        }
+
+        function editSelectedFile() {
+            openSelectedFile();
+        }
+
+        function openFile(file) {
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            const reader = new FileReader();
+
+            if (['png', 'jpg', 'jpeg', 'gif', 'bmp'].includes(ext)) {
+                reader.onload = (e) => showImage(file.name, e.target.result);
+                reader.readAsDataURL(file);
+            } else if (ext === 'lang') {
+                reader.onload = (e) => editLangFile(file, new Uint8Array(e.target.result));
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'lng') {
+                reader.onload = (e) => editLngFile(file, new Uint8Array(e.target.result));
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'class') {
+                reader.onload = (e) => editClassFile(file, new Uint8Array(e.target.result));
+                reader.readAsArrayBuffer(file);
+            } else if (['txt', 'bin'].includes(ext)) {
+                reader.onload = (e) => editTextFile(file, e.target.result);
+                reader.readAsText(file);
+            } else {
+                showAlert('Info', `Tipo de arquivo não suportado: .${ext}`);
+            }
+        }
+
+        // Image viewer
+        function showImage(filename, dataUrl) {
+            const modal = document.getElementById('mainModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            const footer = document.getElementById('modalFooter');
+
+            title.textContent = filename;
+            body.innerHTML = `<img src="${dataUrl}" class="img-preview" alt="${filename}">`;
+            footer.innerHTML = '<button class="btn" onclick="closeModal()">Fechar</button>';
+
+            modal.classList.add('show');
+        }
+
+        // Lang file editor (.lang - Fishlabs format)
+        function editLangFile(file, buffer) {
+            try {
+                fileData = [];
+                let offset = 0;
+
+                while (offset < buffer.length) {
+                    if (offset + 2 > buffer.length) break;
+                    
+                    const length = (buffer[offset] << 8) | buffer[offset + 1];
+                    offset += 2;
+
+                    if (offset + length > buffer.length) break;
+
+                    const textBytes = buffer.slice(offset, offset + length);
+                    const text = new TextDecoder('utf-8').decode(textBytes);
+                    fileData.push(text);
+                    offset += length;
+                }
+
+                currentEditFile = { file, type: 'lang' };
+                showEditorWindow(file.name, 'Arquivo .lang');
+            } catch (error) {
+                showAlert('Erro', `Erro ao abrir .lang: ${error.message}`);
+            }
+        }
+
+        // Lng file editor (.lng - Handy-Games format)
+        function editLngFile(file, buffer) {
+            try {
+                let offset = 0;
+
+                // Ler cabeçalho
+                const fileSize = buffer[offset] | (buffer[offset + 1] << 8);
+                offset += 2;
+
+                const version = buffer[offset];
+                offset += 1;
+
+                if (version > 2) {
+                    showAlert('Erro', 'Arquivo .lng inválido');
+                    return;
+                }
+
+                const count = buffer[offset] | (buffer[offset + 1] << 8);
+                offset += 2;
+
+                // Ler offsets
+                const offsets = [];
+                for (let i = 0; i <= count; i++) {
+                    const off = buffer[offset] | (buffer[offset + 1] << 8);
+                    offsets.push(off);
+                    offset += 2;
+                }
+
+                // Ler strings
+                fileData = [];
+                for (let i = 0; i < count; i++) {
+                    const size = offsets[i + 1] - offsets[i];
+                    const textBytes = buffer.slice(offsets[i], offsets[i + 1]);
+                    const text = new TextDecoder('utf-8').decode(textBytes);
+                    fileData.push(text);
+                }
+
+                currentEditFile = { file, type: 'lng' };
+                showEditorWindow(file.name, 'Arquivo .lng');
+            } catch (error) {
+                showAlert('Erro', `Erro ao abrir .lng: ${error.message}`);
+            }
+        }
+
+        // Class file editor (.class - Java bytecode)
+        function editClassFile(file, buffer) {
+            try {
+                let offset = 8; // Pular magic number e versão
+
+                const count = (buffer[offset] << 8) | buffer[offset + 1];
+                offset += 2;
+
+                const constants = new Array(count);
+                const strings = [];
+
+                for (let i = 1; i < count; i++) {
+                    const tag = buffer[offset];
+                    offset += 1;
+
+                    if (tag === 1) { // UTF-8 String
+                        const length = (buffer[offset] << 8) | buffer[offset + 1];
+                        offset += 2;
+                        const textBytes = buffer.slice(offset, offset + length);
+                        const text = new TextDecoder('utf-8').decode(textBytes);
+                        constants[i] = text;
+                        strings.push(text);
+                        offset += length;
+                    } else if (tag === 8) { // String reference
+                        offset += 2;
+                    } else if ([3, 4, 9, 10, 11, 12].includes(tag)) {
+                        offset += 4;
+                    } else if ([5, 6].includes(tag)) {
+                        offset += 8;
+                        i++; // Long and Double take two slots
+                    } else if (tag === 7) {
+                        offset += 2;
+                    }
+                }
+
+                fileData = strings.filter(s => s != null);
+                currentEditFile = { file, type: 'class' };
+                showEditorWindow(file.name, 'Arquivo .class');
+            } catch (error) {
+                showAlert('Erro', `Erro ao abrir .class: ${error.message}`);
+            }
+        }
+
+        // Text file editor
+        function editTextFile(file, content) {
+            const modal = document.getElementById('mainModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            const footer = document.getElementById('modalFooter');
+
+            title.textContent = `Editar: ${file.name}`;
+            body.innerHTML = '<textarea class="text-editor" id="textContent" style="min-height: 300px;"></textarea>';
+            footer.innerHTML = `
+                <button class="btn" onclick="saveTextFile()">Salvar</button>
+                <button class="btn" onclick="closeModal()">Cancelar</button>
+            `;
+
+            document.getElementById('textContent').value = content;
+            currentEditFile = { file, type: 'text' };
+            modal.classList.add('show');
+        }
+
+        function saveTextFile() {
+            const content = document.getElementById('textContent').value;
+            const blob = new Blob([content], { type: 'text/plain' });
+            downloadFile(blob, currentEditFile.file.name);
+            showAlert('Sucesso', 'Arquivo salvo com sucesso!');
+            closeModal();
+        }
+
+        // Editor window for lang/lng/class files
+        function showEditorWindow(filename, title) {
+            const modal = document.getElementById('mainModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            const footer = document.getElementById('modalFooter');
+
+            modalTitle.textContent = `${title}: ${filename}`;
+            
+            let listHTML = '<div class="string-list">';
+            fileData.forEach((item, i) => {
+                const preview = item.length > 50 ? item.substring(0, 50) + '...' : item;
+                listHTML += `<div class="string-item" onclick="editString(${i})">${i + 1}: ${escapeHtml(preview)}</div>`;
+            });
+            listHTML += '</div>';
+
+            body.innerHTML = listHTML;
+            footer.innerHTML = `
+                <button class="btn" onclick="editString()">Editar</button>
+                <button class="btn" onclick="saveAllStrings()">Salvar</button>
+                <button class="btn" onclick="closeModal()">Cancelar</button>
+            `;
+
+            modal.classList.add('show');
+
+            // Adicionar seleção de item
+            document.querySelectorAll('.string-item').forEach((item, i) => {
+                item.onclick = () => {
+                    document.querySelectorAll('.string-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                };
+            });
+        }
+
+        function editString(index) {
+            if (index === undefined) {
+                const selected = document.querySelector('.string-item.selected');
+                if (!selected) return;
+                index = parseInt(selected.textContent.split(':')[0]) - 1;
+            }
+
+            const editModal = document.createElement('div');
+            editModal.className = 'modal show';
+            editModal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">Editar String ${index + 1}</div>
+                    <div class="modal-body">
+                        <textarea class="text-editor" id="editStringText">${escapeHtml(fileData[index])}</textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn" onclick="saveEditedString(${index}); this.closest('.modal').remove();">Salvar</button>
+                        <button class="btn" onclick="this.closest('.modal').remove();">Cancelar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(editModal);
+        }
+
+        function saveEditedString(index) {
+            const text = document.getElementById('editStringText').value.trim();
+            fileData[index] = text;
+            
+            // Atualizar lista
+            const preview = text.length > 50 ? text.substring(0, 50) + '...' : text;
+            document.querySelectorAll('.string-item')[index].innerHTML = `${index + 1}: ${escapeHtml(preview)}`;
+        }
+
+        function saveAllStrings() {
+            try {
+                if (currentEditFile.type === 'lang') {
+                    saveLangFile();
+                } else if (currentEditFile.type === 'lng') {
+                    saveLngFile();
+                } else if (currentEditFile.type === 'class') {
+                    showAlert('Info', 'Salvamento de .class requer implementação complexa');
+                    return;
+                }
+                showAlert('Sucesso', 'Arquivo salvo!');
+                closeModal();
+            } catch (error) {
+                showAlert('Erro', `Erro ao salvar: ${error.message}`);
+            }
+        }
+
+        function saveLangFile() {
+            let totalSize = 0;
+            const encodedStrings = fileData.map(str => {
+                const bytes = new TextEncoder().encode(str);
+                totalSize += 2 + bytes.length;
+                return bytes;
+            });
+
+            const buffer = new Uint8Array(totalSize);
+            let offset = 0;
+
+            encodedStrings.forEach(bytes => {
+                buffer[offset] = (bytes.length >> 8) & 0xFF;
+                buffer[offset + 1] = bytes.length & 0xFF;
+                offset += 2;
+                buffer.set(bytes, offset);
+                offset += bytes.length;
+            });
+
+            const blob = new Blob([buffer], { type: 'application/octet-stream' });
+            downloadFile(blob, currentEditFile.file.name);
+        }
+
+        function saveLngFile() {
+            const count = fileData.length;
+            const encodedStrings = fileData.map(str => new TextEncoder().encode(str));
+            
+            // Calcular offsets
+            const offsets = [(count + 1) * 2 + 3];
+            encodedStrings.forEach(bytes => {
+                offsets.push(offsets[offsets.length - 1] + bytes.length);
+            });
+
+            const totalSize = offsets[offsets.length - 1];
+            const bufferSize = 2 + 1 + 2 + offsets.length * 2 + totalSize - offsets[0];
+            const buffer = new Uint8Array(bufferSize);
+            let offset = 0;
+
+            // Cabeçalho
+            buffer[offset] = (totalSize + 2) & 0xFF;
+            buffer[offset + 1] = ((totalSize + 2) >> 8) & 0xFF;
+            offset += 2;
+
+            buffer[offset] = 2; // versão
+            offset += 1;
+
+            buffer[offset] = count & 0xFF;
+            buffer[offset + 1] = (count >> 8) & 0xFF;
+            offset += 2;
+
+            // Offsets
+            offsets.forEach(off => {
+                buffer[offset] = off & 0xFF;
+                buffer[offset + 1] = (off >> 8) & 0xFF;
+                offset += 2;
+            });
+
+            // Strings
+            encodedStrings.forEach(bytes => {
+                buffer.set(bytes, offset);
+                offset += bytes.length;
+            });
+
+            const blob = new Blob([buffer], { type: 'application/octet-stream' });
+            downloadFile(blob, currentEditFile.file.name);
+        }
+
+        // Cipher functions
+        function netlizardCipher() {
+            if (selectedFileIndex < 0) {
+                showAlert('Aviso', 'Selecione um arquivo');
+                return;
+            }
+
+            const files = currentFiles.filter(f => f.webkitRelativePath.split('/').length === 2);
+            const file = files[selectedFileIndex];
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                
+                let key = 100;
+                for (let i = 0; i < data.length; i++) {
+                    data[i] ^= key;
+                    key = (key + 1) % 256;
+                }
+
+                const blob = new Blob([data], { type: 'application/octet-stream' });
+                downloadFile(blob, file.name);
+                showAlert('Sucesso', 'Arquivo cifrado/decifrado com sucesso!');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function fishlabsCipher() {
+            if (selectedFileIndex < 0) {
+                showAlert('Aviso', 'Selecione um arquivo');
+                return;
+            }
+
+            const files = currentFiles.filter(f => f.webkitRelativePath.split('/').length === 2);
+            const file = files[selectedFileIndex];
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const size = data.length;
+
+                let swapCount;
+                if (size < 100) {
+                    swapCount = 10 + size % 10;
+                } else if (size < 200) {
+                    swapCount = 50 + size % 20;
+                } else if (size < 300) {
+                    swapCount = 80 + size % 20;
+                } else {
+                    swapCount = 100 + size % 50;
+                }
+
+                for (let i = 0; i < swapCount; i++) {
+                    const temp = data[i];
+                    data[i] = data[size - i - 1];
+                    data[size - i - 1] = temp;
+                }
+
+                const blob = new Blob([data], { type: 'application/octet-stream' });
+                downloadFile(blob, file.name);
+                showAlert('Sucesso', 'Arquivo cifrado/decifrado com sucesso!');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function changeFileSize() {
+            if (selectedFileIndex < 0) {
+                showAlert('Aviso', 'Selecione um arquivo');
+                return;
+            }
+
+            const files = currentFiles.filter(f => f.webkitRelativePath.split('/').length === 2);
+            const file = files[selectedFileIndex];
+            const currentSize = file.size;
+
+            const modal = document.getElementById('mainModal');
+            const title = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            const footer = document.getElementById('modalFooter');
+
+            title.textContent = 'Alterar Tamanho';
+            body.innerHTML = `
+                <div class="input-group">
+                    <label>Tamanho atual: ${currentSize} bytes</label>
+                </div>
+                <div class="input-group">
+                    <label>Novo tamanho (bytes):</label>
+                    <input type="number" id="newSize" value="${currentSize}">
+                </div>
+            `;
+            footer.innerHTML = `
+                <button class="btn" onclick="applyNewSize(${currentSize}, '${file.name}')">Aplicar</button>
+                <button class="btn" onclick="closeModal()">Cancelar</button>
+            `;
+
+            modal.classList.add('show');
+        }
+
+        function applyNewSize(currentSize, filename) {
+            const newSize = parseInt(document.getElementById('newSize').value);
+            
+            const files = currentFiles.filter(f => f.webkitRelativePath.split('/').length === 2);
+            const file = files.find(f => f.name === filename);
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                let newData;
+
+                if (newSize < currentSize) {
+                    newData = data.slice(0, newSize);
+                } else {
+                    newData = new Uint8Array(newSize);
+                    newData.set(data);
+                }
+
+                const blob = new Blob([newData], { type: 'application/octet-stream' });
+                downloadFile(blob, filename);
+                showAlert('Sucesso', 'Tamanho alterado!');
+                closeModal();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // About and Help
+        function showAbout() {
+            showAlert('Sobre', `LangEditor v1.1
+
+Portado por Quakeman
+Original Java ME por Kron
+Suporta edição de arquivos criptografados
+Criptografia NetLizard e Fishlabs
+
+(c) 2025 - Versão HTML`);
+        }
+
+        function showHelp() {
+            const helpText = `Este programa é destinado para editar alguns arquivos de jogos Java.
+
+Recursos:
+- Cifrador/decifrador NetLizard (XOR com chave incremental)
+- Cifrador/decifrador Fishlabs (inversão de bytes)
+- Editor de arquivos .lang (Fishlabs)
+- Editor de arquivos .lng (Handy-Games)
+- Editor de strings em arquivos .class
+- Visualizador de imagens
+- Alteração de tamanho de arquivos
+
+Uso:
+1. Use "Arquivo → Abrir Pasta" para selecionar uma pasta
+2. Selecione arquivos na lista
+3. Dê duplo clique ou use "Abrir" para abrir arquivos
+4. Use o menu Ferramentas para cifrar/decifrar
+5. Edite strings diretamente nas janelas de edição`;
+
+            showAlert('Ajuda', helpText);
+        }
+
+        // Utility functions
+        function showAlert(title, message) {
+            const modal = document.getElementById('mainModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const body = document.getElementById('modalBody');
+            const footer = document.getElementById('modalFooter');
+
+            modalTitle.textContent = title;
+            body.innerHTML = `<div class="info-text">${escapeHtml(message)}</div>`;
+            footer.innerHTML = '<button class="btn" onclick="closeModal()">OK</button>';
+
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('mainModal').classList.remove('show');
+            document.querySelectorAll('.modal').forEach(modal => {
+                if (modal.id !== 'mainModal') {
+                    modal.remove();
+                }
+            });
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modal on outside click
+        window.onclick = (e) => {
+            if (e.target.classList.contains('modal')) {
+                closeModal();
+            }
+        };
+    </script>
+</body>
+</html>
