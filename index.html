@@ -1,349 +1,260 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<title>Editores de textos J2me</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #d4d4d4;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.header {
-    text-align: center;
-    margin-bottom: 3rem;
-    animation: fadeInDown 0.6s ease-out;
-}
-
-h1 {
-    font-size: 3rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 0.5rem;
-    letter-spacing: -1px;
-}
-
-.subtitle {
-    color: #94a3b8;
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-.menu {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    width: 100%;
-    max-width: 1200px;
-    animation: fadeInUp 0.6s ease-out;
-}
-
-.menu-card {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border: 1px solid #475569;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.menu-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
-}
-
-.menu-card:hover::before {
-    transform: scaleX(1);
-}
-
-.menu-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
-    border-color: #3b82f6;
-}
-
-.card-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
-}
-
-.menu-card h2 {
-    margin-bottom: 1.5rem;
-    color: #e2e8f0;
-    text-align: center;
-    font-weight: 600;
-    font-size: 1.25rem;
-}
-
-.button-group {
-    display: flex;
-    gap: 0.75rem;
-    width: 100%;
-}
-
-.menu-card button {
-    flex: 1;
-    font-family: 'Segoe UI', sans-serif;
-    font-weight: 600;
-    border-radius: 0.5rem;
-    border: none;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    padding: 0.75rem 1.25rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.menu-card button:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-}
-
-.menu-card button:active {
-    transform: scale(0.98);
-}
-
-.menu-card button.mobile {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.menu-card button.mobile:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
-}
-
-.single-button {
-    width: 100%;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.single-button:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-}
-
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-30px);
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editores J2ME</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root {
+      --bg: #0f121a;
+      --card: #161b22;
+      --text: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --accent: #3b82f6;
+      --accent-dark: #2563eb;
+      --border: #30363d;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
-@media (max-width: 768px) {
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 3rem 1rem 4rem;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+
     h1 {
-        font-size: 2rem;
+      font-size: 2.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: white;
     }
-    
+
     .subtitle {
-        font-size: 1rem;
+      color: var(--text-secondary);
+      font-size: 1.15rem;
     }
-    
-    .menu {
-        grid-template-columns: 1fr;
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
     }
-    
-    .button-group {
-        flex-direction: column;
+
+    .tool-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem 1.5rem;
+      transition: all 0.22s ease;
     }
-}
-</style>
+
+    .tool-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+    }
+
+    .tool-icon {
+      font-size: 2.1rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .tool-card h2 {
+      font-size: 1.35rem;
+      margin-bottom: 1.25rem;
+      color: white;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 110px;
+      padding: 0.75rem 1.1rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dark);
+    }
+
+    .btn-green {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-green:hover {
+      background: #059669;
+    }
+
+    .btn-purple {
+      background: #8b5cf6;
+      color: white;
+    }
+
+    .btn-purple:hover {
+      background: #7c3aed;
+    }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 2.3rem; }
+      .tools-grid { gap: 1.25rem; }
+      .buttons { flex-direction: column; gap: 0.6rem; }
+      .btn { min-width: unset; }
+    }
+  </style>
 </head>
 <body>
-<div class="header">
-    <h1>Editores J2ME</h1>
-    <p class="subtitle">Ferramentas para tradução e modding jogos</p>
-</div>
 
-<div class="menu">
-    <div class="menu-card">
-        <div class="card-icon">👾</div>
+  <div class="container">
+    <header>
+      <h1>Editores J2ME</h1>
+      <p class="subtitle">Ferramentas para tradução, modding e edição de jogos Java ME</p>
+    </header>
+
+    <div class="tools-grid">
+
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-gamepad"></i></div>
         <h2>DoomRPG Text Editor</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-desktop.html','_blank')">
-                💻 Desktop
-            </button>
-            <button class="mobile" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-mobile.html','_blank')">
-                📱 Mobile
-            </button>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-desktop.html','_blank')">Desktop</button>
+          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-mobile.html','_blank')">Mobile</button>
         </div>
-    </div>
+      </div>
 
-    <div class="menu-card">
-        <div class="card-icon">⚙️</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-cog"></i></div>
         <h2>Class Editor</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-desktop.html','_blank')">
-                💻 Desktop
-            </button>
-            <button class="mobile" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-mobile.html','_blank')">
-                📱 Mobile
-            </button>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-desktop.html','_blank')">Desktop</button>
+          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-mobile.html','_blank')">Mobile</button>
         </div>
-    </div>
+      </div>
 
-    <div class="menu-card">
-        <div class="card-icon">🎯</div>
-        <h2>Herocraft/Fishlabs</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-d.html','_blank')">
-                💻 Desktop
-            </button>
-            <button class="mobile" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-m.html','_blank')">
-                📱 Mobile
-            </button>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-crosshairs"></i></div>
+        <h2>Herocraft / Fishlabs</h2>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-d.html','_blank')">Desktop</button>
+          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-m.html','_blank')">Mobile</button>
         </div>
-    </div>
+      </div>
 
-    <div class="menu-card">
-        <div class="card-icon">📝</div>
-        <h2>GLU TEXT EDITOR</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/glueditor.html','_blank')">
-                💻 Desktop
-            </button>
-            <button class="mobile" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/glueditor-mobile.html','_blank')">
-                📱 Mobile
-            </button>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-file-lines"></i></div>
+        <h2>GLU Text Editor</h2>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/glueditor.html','_blank')">Desktop</button>
+          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/glueditor-mobile.html','_blank')">Mobile</button>
         </div>
-    </div>
+      </div>
 
-    <div class="menu-card">
-        <div class="card-icon">🛠️</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-tools"></i></div>
         <h2>Devalley Tools</h2>
-        <button class="single-button" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/devalley_text.html','_blank')">
-            💻 Abrir Editor
-        </button>
-    </div>
+        <div class="buttons">
+          <button class="btn btn-green" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/devalley_text.html','_blank')">Abrir Editor</button>
+        </div>
+      </div>
 
-    <div class="menu-card">
-        <div class="card-icon">⭐</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-star"></i></div>
         <h2>Asterix Studio</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/asterix_studio.html','_blank')">
-                💻 Desktop
-            </button>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/asterix_studio.html','_blank')">Desktop</button>
         </div>
-    </div>
+      </div>
 
-
-        <div class="menu-card">
-        <div class="card-icon">⭐</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-image"></i></div>
         <h2>PNGLab</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/pnglab.htm','_blank')">
-                💻 Desktop
-            </button>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/pnglab.htm','_blank')">Desktop</button>
         </div>
-    </div>
+      </div>
 
-        <div class="menu-card">
-        <div class="card-icon">📝</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-cube"></i></div>
         <h2>B3D Tools</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/b3d.html','_blank')">
-                💻 Desktop
-            </button>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/b3d.html','_blank')">Desktop</button>
         </div>
-    </div>
+      </div>
 
-        <div class="menu-card">
-        <div class="card-icon">🛠️</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-handshake"></i></div>
         <h2>HandsON Tool</h2>
-        <button class="single-button" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/hands.html','_blank')">
-            💻 Abrir Editor
-        </button>
-    </div>
+        <div class="buttons">
+          <button class="btn btn-green" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/hands.html','_blank')">Abrir Editor</button>
+        </div>
+      </div>
 
-        <div class="menu-card">
-        <div class="card-icon">🛠️</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-language"></i></div>
         <h2>LangEditor Port</h2>
-        <button class="single-button" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang.html','_blank')">
-            💻 Abrir Editor
-        </button>
-    </div>
+        <div class="buttons">
+          <button class="btn btn-green" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang.html','_blank')">Abrir Editor</button>
+        </div>
+      </div>
 
-
-    
-        <div class="menu-card">
-        <div class="card-icon">📝</div>
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-file-alt"></i></div>
         <h2>Lang2ME</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang2me.html','_blank')">
-                💻 Desktop
-            </button>
-            <button class="mobile" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang2me_mobile.html','_blank')">
-                📱 Mobile
-            </button>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang2me.html','_blank')">Desktop</button>
+          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang2me_mobile.html','_blank')">Mobile</button>
         </div>
-    </div>
+      </div>
 
-            <div class="menu-card">
-        <div class="card-icon">📝</div>
+      <!-- Novo card adicionado aqui -->
+      <div class="tool-card">
+        <div class="tool-icon"><i class="fas fa-map"></i></div>
         <h2>MAPS</h2>
-        <div class="button-group">
-            <button onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/MI3_Gameloft_maps.html','_blank')">
-                MI3
-            </button>
-            <button class="mobile" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/pirates_viewer.html','_blank')">
-                PIRATES
-            </button>
-            <button class="mobile" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/POP_TT_Gameloft_maps.html','_blank')">
-                POP TT
-            </button>
+        <div class="buttons">
+          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/MI3_Gameloft_maps.html','_blank')">MI3</button>
+          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/pirates_viewer.html','_blank')">PIRATES</button>
+          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/POP_TT_Gameloft_maps.html','_blank')">POP TT</button>
         </div>
+      </div>
 
     </div>
-    </div>
-</div>
+  </div>
+
 </body>
 </html>
