@@ -8,253 +8,330 @@
   <style>
     :root {
       --bg: #0f121a;
-      --card: #161b22;
+      --sidebar: #161b22;
       --text: #e2e8f0;
       --text-secondary: #94a3b8;
       --accent: #3b82f6;
-      --accent-dark: #2563eb;
       --border: #30363d;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; }
 
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 3rem 1rem 4rem;
-      line-height: 1.5;
+      display: flex;
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
+    .sidebar {
+      width: 280px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      height: 100vh;
+      position: fixed;
+      padding: 1.5rem 0;
     }
 
-    header {
+    .header {
+      padding: 0 1.5rem 1.5rem;
       text-align: center;
-      margin-bottom: 3.5rem;
+      border-bottom: 1px solid var(--border);
     }
 
-    h1 {
-      font-size: 2.8rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      color: white;
+    .header h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.3rem;
     }
 
-    .subtitle {
+    .header .subtitle {
+      font-size: 0.9rem;
       color: var(--text-secondary);
-      font-size: 1.15rem;
     }
 
-    .tools-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 1.5rem;
+    .accordion {
+      margin-top: 1rem;
     }
 
-    .tool-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.75rem 1.5rem;
-      transition: all 0.22s ease;
+    .accordion-item {
+      border-bottom: 1px solid var(--border);
     }
 
-    .tool-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-4px);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+    .accordion-header {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.2s;
     }
 
-    .tool-icon {
-      font-size: 2.1rem;
-      margin-bottom: 1rem;
+    .accordion-header:hover {
+      background: #1e293b;
+    }
+
+    .accordion-header i {
+      transition: transform 0.3s;
+    }
+
+    .accordion-header.active i {
+      transform: rotate(180deg);
+    }
+
+    .accordion-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      padding: 0 1.5rem;
+    }
+
+    .accordion-content.active {
+      max-height: 500px; /* ajuste se precisar de mais espaço */
+      padding: 1rem 1.5rem;
+    }
+
+    .option {
+      padding: 0.8rem 0;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+
+    .option:hover,
+    .option.active {
       color: var(--accent);
     }
 
-    .tool-card h2 {
-      font-size: 1.35rem;
-      margin-bottom: 1.25rem;
-      color: white;
-    }
-
-    .buttons {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .btn {
+    .main {
+      margin-left: 280px;
       flex: 1;
-      min-width: 110px;
-      padding: 0.75rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .iframe-container {
+      flex: 1;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    #main-iframe {
+      width: 100%;
+      height: 100%;
       border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 0.95rem;
-      text-align: center;
+      border-radius: 10px;
+      background: var(--sidebar);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
 
-    .btn-primary {
-      background: var(--accent);
-      color: white;
+    .loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
     }
 
-    .btn-primary:hover {
-      background: var(--accent-dark);
-    }
-
-    .btn-green {
-      background: #10b981;
-      color: white;
-    }
-
-    .btn-green:hover {
-      background: #059669;
-    }
-
-    .btn-purple {
-      background: #8b5cf6;
-      color: white;
-    }
-
-    .btn-purple:hover {
-      background: #7c3aed;
-    }
-
-    @media (max-width: 600px) {
-      h1 { font-size: 2.3rem; }
-      .tools-grid { gap: 1.25rem; }
-      .buttons { flex-direction: column; gap: 0.6rem; }
-      .btn { min-width: unset; }
+    @media (max-width: 900px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .main {
+        margin-left: 0;
+      }
+      .accordion-content.active {
+        max-height: none; /* para mobile, deixa crescer livre */
+      }
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <header>
+  <aside class="sidebar">
+    <div class="header">
       <h1>Editores J2ME</h1>
-      <p class="subtitle">Ferramentas para tradução, modding e edição de jogos Java ME</p>
-    </header>
+      <p class="subtitle">Ferramentas para modding e tradução</p>
+    </div>
 
-    <div class="tools-grid">
+    <div class="accordion">
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-gamepad"></i></div>
-        <h2>DoomRPG Text Editor</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-desktop.html','_blank')">Desktop</button>
-          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-mobile.html','_blank')">Mobile</button>
+      <div class="accordion-item">
+        <div class="accordion-header" data-target="doom">
+          <span><i class="fas fa-gamepad"></i> DoomRPG Text Editor</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="accordion-content" id="doom">
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-desktop.html">Desktop</div>
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/doom-text-mobile.html">Mobile</div>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-cog"></i></div>
-        <h2>Class Editor</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-desktop.html','_blank')">Desktop</button>
-          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-mobile.html','_blank')">Mobile</button>
+      <div class="accordion-item">
+        <div class="accordion-header" data-target="class">
+          <span><i class="fas fa-cog"></i> Class Editor</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="accordion-content" id="class">
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-desktop.html">Desktop</div>
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/class-editor-mobile.html">Mobile</div>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-crosshairs"></i></div>
-        <h2>Herocraft / Fishlabs</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-d.html','_blank')">Desktop</button>
-          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-m.html','_blank')">Mobile</button>
+      <div class="accordion-item">
+        <div class="accordion-header" data-target="herocraft">
+          <span><i class="fas fa-crosshairs"></i> Herocraft / Fishlabs</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="accordion-content" id="herocraft">
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-d.html">Desktop</div>
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/collider-text-editor-m.html">Mobile</div>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-file-lines"></i></div>
-        <h2>GLU Text Editor</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/glueditor.html','_blank')">Desktop</button>
-          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/glueditor-mobile.html','_blank')">Mobile</button>
+      <div class="accordion-item">
+        <div class="accordion-header" data-target="glu">
+          <span><i class="fas fa-file-lines"></i> GLU Text Editor</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="accordion-content" id="glu">
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/glueditor.html">Desktop</div>
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/glueditor-mobile.html">Mobile</div>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-tools"></i></div>
-        <h2>Devalley Tools</h2>
-        <div class="buttons">
-          <button class="btn btn-green" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/devalley_text.html','_blank')">Abrir Editor</button>
+      <div class="accordion-item">
+        <div class="accordion-header single" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/devalley_text.html">
+          <span><i class="fas fa-tools"></i> Devalley Tools</span>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-star"></i></div>
-        <h2>Asterix Studio</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/asterix_studio.html','_blank')">Desktop</button>
+      <div class="accordion-item">
+        <div class="accordion-header single" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/asterix_studio.html">
+          <span><i class="fas fa-star"></i> Asterix Studio</span>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-image"></i></div>
-        <h2>PNGLab</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/pnglab.htm','_blank')">Desktop</button>
+      <div class="accordion-item">
+        <div class="accordion-header single" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/pnglab.htm">
+          <span><i class="fas fa-image"></i> PNGLab</span>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-cube"></i></div>
-        <h2>B3D Tools</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/b3d.html','_blank')">Desktop</button>
+      <div class="accordion-item">
+        <div class="accordion-header single" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/b3d.html">
+          <span><i class="fas fa-cube"></i> B3D Tools</span>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-handshake"></i></div>
-        <h2>HandsON Tool</h2>
-        <div class="buttons">
-          <button class="btn btn-green" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/hands.html','_blank')">Abrir Editor</button>
+      <div class="accordion-item">
+        <div class="accordion-header single" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/hands.html">
+          <span><i class="fas fa-handshake"></i> HandsON Tool</span>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-language"></i></div>
-        <h2>LangEditor Port</h2>
-        <div class="buttons">
-          <button class="btn btn-green" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang.html','_blank')">Abrir Editor</button>
+      <div class="accordion-item">
+        <div class="accordion-header single" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/lang.html">
+          <span><i class="fas fa-language"></i> LangEditor Port</span>
         </div>
       </div>
 
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-file-alt"></i></div>
-        <h2>Lang2ME</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang2me.html','_blank')">Desktop</button>
-          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/lang2me_mobile.html','_blank')">Mobile</button>
+      <div class="accordion-item">
+        <div class="accordion-header" data-target="lang2me">
+          <span><i class="fas fa-file-alt"></i> Lang2ME</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="accordion-content" id="lang2me">
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/lang2me.html">Desktop</div>
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/lang2me_mobile.html">Mobile</div>
         </div>
       </div>
 
-      <!-- Novo card adicionado aqui -->
-      <div class="tool-card">
-        <div class="tool-icon"><i class="fas fa-map"></i></div>
-        <h2>MAPS</h2>
-        <div class="buttons">
-          <button class="btn btn-primary" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/MI3_Gameloft_maps.html','_blank')">MI3</button>
-          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/pirates_viewer.html','_blank')">PIRATES</button>
-          <button class="btn btn-purple" onclick="window.open('https://quakeman22.github.io/J2meHtmlTools/tools/POP_TT_Gameloft_maps.html','_blank')">POP TT</button>
+      <div class="accordion-item">
+        <div class="accordion-header" data-target="maps">
+          <span><i class="fas fa-map"></i> MAPS</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="accordion-content" id="maps">
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/MI3_Gameloft_maps.html">MI3</div>
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/pirates_viewer.html">PIRATES</div>
+          <div class="option" data-url="https://quakeman22.github.io/J2meHtmlTools/tools/POP_TT_Gameloft_maps.html">POP TT</div>
         </div>
       </div>
 
     </div>
-  </div>
+  </aside>
+
+  <main class="main">
+    <div class="iframe-container">
+      <div class="loading" id="loading">Selecione uma ferramenta no menu lateral...</div>
+      <iframe id="main-iframe" src="about:blank"></iframe>
+    </div>
+  </main>
+
+  <script>
+    const iframe = document.getElementById('main-iframe');
+    const loading = document.getElementById('loading');
+
+    // Accordion toggle
+    document.querySelectorAll('.accordion-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const isSingle = header.classList.contains('single');
+        const target = header.dataset.target;
+        const url = header.dataset.url;
+
+        // Fecha todos os outros
+        document.querySelectorAll('.accordion-header').forEach(h => {
+          if (h !== header) h.classList.remove('active');
+        });
+        document.querySelectorAll('.accordion-content').forEach(c => {
+          if (c.id !== target) c.classList.remove('active');
+        });
+
+        if (!isSingle) {
+          header.classList.toggle('active');
+          const content = document.getElementById(target);
+          content.classList.toggle('active');
+        }
+
+        // Se for single ou opção clicada, carrega URL
+        if (url) {
+          loadIframe(url);
+        }
+      });
+    });
+
+    // Clique nas opções dentro do accordion
+    document.querySelectorAll('.option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+
+        const url = opt.dataset.url;
+        if (url) loadIframe(url);
+      });
+    });
+
+    function loadIframe(url) {
+      loading.style.display = 'flex';
+      iframe.style.display = 'none';
+      iframe.src = url;
+      iframe.onload = () => {
+        loading.style.display = 'none';
+        iframe.style.display = 'block';
+      };
+    }
+
+    // Opcional: abre o primeiro item por padrão
+    // document.querySelector('.accordion-header').click();
+  </script>
 
 </body>
 </html>
