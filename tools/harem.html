@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POP: Harem Adventures — Map Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --bg:        #0d0d0f;
+    --panel:     #13131a;
+    --border:    #2a2a3a;
+    --accent:    #c8960a;
+    --accent2:   #7b4fc8;
+    --danger:    #c83030;
+    --text:      #d4c9a8;
+    --text-dim:  #6a6458;
+    --tile-w: 16px;
+    --tile-h: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── TOPBAR ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  #topbar .logo {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+  #topbar .sep { width: 1px; height: 20px; background: var(--border); }
+
+  .btn {
+    background: #1e1e2e;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { border-color: var(--accent); color: var(--accent); background: #1e1a0a; }
+  .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  #level-tabs { display: flex; gap: 4px; }
+  .level-tab {
+    background: #1a1a22;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 3px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all .15s;
+  }
+  .level-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .level-tab.active { background: #1e1a0a; border-color: var(--accent); color: var(--accent); }
+
+  #status-bar {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── LEFT PANEL ── */
+  #left-panel {
+    width: 180px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    padding: 8px 10px 4px;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+
+  /* tool buttons */
+  #tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tool-btn {
+    background: #1a1a22;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 5px 4px;
+    cursor: pointer;
+    border-radius: 2px;
+    text-align: center;
+    transition: all .15s;
+  }
+  .tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tool-btn.active { background: #1e1a0a; border-color: var(--accent); color: var(--accent); }
+
+  /* tile palette */
+  #palette-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+  }
+  #palette-container::-webkit-scrollbar { width: 4px; }
+  #palette-container::-webkit-scrollbar-track { background: var(--panel); }
+  #palette-container::-webkit-scrollbar-thumb { background: var(--border); }
+
+  #tile-palette {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    image-rendering: pixelated;
+  }
+  .palette-tile {
+    width: 100%;
+    aspect-ratio: 16/24;
+    cursor: pointer;
+    border: 1px solid transparent;
+    image-rendering: pixelated;
+    transition: border-color .1s;
+  }
+  .palette-tile:hover { border-color: var(--accent2); }
+  .palette-tile.selected { border-color: var(--accent); outline: 1px solid var(--accent); }
+
+  /* entity panel */
+  #entity-panel {
+    border-top: 1px solid var(--border);
+    padding: 8px;
+  }
+  #entity-panel .panel-title { padding: 0 0 6px; border: none; }
+  .entity-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+  .entity-btn {
+    background: #1a1a22;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 4px 3px;
+    cursor: pointer;
+    border-radius: 2px;
+    text-align: center;
+    transition: all .15s;
+  }
+  .entity-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .entity-btn.active { background: #150e22; border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── CANVAS AREA ── */
+  #canvas-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #090910;
+    position: relative;
+  }
+  #canvas-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+  #canvas-wrap::-webkit-scrollbar-track { background: var(--bg); }
+  #canvas-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  #map-canvas {
+    display: block;
+    image-rendering: pixelated;
+    cursor: crosshair;
+  }
+  #map-canvas.tool-erase { cursor: cell; }
+  #map-canvas.tool-select { cursor: default; }
+  #map-canvas.tool-fill { cursor: copy; }
+  #map-canvas.tool-mirror { cursor: ew-resize; }
+
+  /* ── RIGHT PANEL ── */
+  #right-panel {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  #right-panel::-webkit-scrollbar { width: 4px; }
+  #right-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .info-block {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-block label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .info-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .coord-row { display: flex; gap: 8px; }
+  .coord-row input {
+    background: #1a1a22;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 3px 6px;
+    width: 100%;
+    border-radius: 2px;
+  }
+  .coord-row input:focus { outline: none; border-color: var(--accent); }
+
+  #entity-list { padding: 6px; display: flex; flex-direction: column; gap: 3px; }
+  .entity-item {
+    background: #1a1a22;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: border-color .1s;
+  }
+  .entity-item:hover { border-color: var(--accent2); }
+  .entity-item.selected { border-color: var(--accent); background: #15100a; }
+  .entity-item .del { color: var(--danger); cursor: pointer; padding: 0 2px; }
+
+  /* ── DROP OVERLAY ── */
+  #drop-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    gap: 16px;
+  }
+  #drop-overlay .drop-box {
+    border: 2px dashed var(--accent);
+    border-radius: 4px;
+    padding: 48px 80px;
+    text-align: center;
+    transition: background .2s;
+  }
+  #drop-overlay .drop-box.drag-over { background: rgba(200,150,10,.08); }
+  #drop-overlay .drop-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+  #drop-overlay .drop-sub { color: var(--text-dim); font-size: 14px; margin-bottom: 20px; }
+  #file-input { display: none; }
+  #drop-overlay label.btn { display: inline-block; }
+
+  /* ── GRID OVERLAY toggle ── */
+  #grid-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+    opacity: 0.18;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">◈ POP·HAREM·EDITOR</div>
+  <div class="sep"></div>
+  <div id="level-tabs"></div>
+  <div class="sep"></div>
+  <button class="btn" id="btn-grid">GRID</button>
+  <button class="btn" id="btn-entities">ENTITIES</button>
+  <button class="btn" id="btn-undo">⟲ UNDO</button>
+  <button class="btn" id="btn-redo">⟳ REDO</button>
+  <button class="btn" id="btn-save">⬇ SAVE .LVL</button>
+  <button class="btn danger" id="btn-load-new">LOAD JAR</button>
+  <div id="status-bar">ready</div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT -->
+  <div id="left-panel">
+    <div class="panel-title">◈ TOOLS</div>
+    <div id="tools">
+      <div class="tool-btn active" data-tool="draw"   title="Draw tile (B)">✏ DRAW</div>
+      <div class="tool-btn"        data-tool="erase"  title="Erase tile (E)">◻ ERASE</div>
+      <div class="tool-btn"        data-tool="fill"   title="Flood fill (F)">▣ FILL</div>
+      <div class="tool-btn"        data-tool="pick"   title="Pick tile (I)">✦ PICK</div>
+      <div class="tool-btn"        data-tool="mirror" title="Mirror draw (M)">⇔ MIRROR</div>
+      <div class="tool-btn"        data-tool="entity" title="Entity mode (V)">◉ ENTITY</div>
+    </div>
+    <div class="panel-title">◈ TILES</div>
+    <div id="palette-container">
+      <div id="tile-palette"></div>
+    </div>
+    <div id="entity-panel">
+      <div class="panel-title">◈ ADD ENTITY</div>
+      <div class="entity-btns">
+        <div class="entity-btn" data-etype="spawn">SPAWN</div>
+        <div class="entity-btn" data-etype="exit">EXIT</div>
+        <div class="entity-btn" data-etype="door">DOOR</div>
+        <div class="entity-btn" data-etype="guard">GUARD</div>
+        <div class="entity-btn" data-etype="snake">SNAKE</div>
+        <div class="entity-btn" data-etype="flame">FLAME</div>
+        <div class="entity-btn" data-etype="lever">LEVER</div>
+        <div class="entity-btn" data-etype="potion">POTION</div>
+        <div class="entity-btn" data-etype="trap">TRAP</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-wrap">
+    <canvas id="map-canvas"></canvas>
+    <canvas id="grid-overlay"></canvas>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right-panel">
+    <div class="info-block">
+      <label>MAP SIZE</label>
+      <div class="info-val" id="info-size">–</div>
+    </div>
+    <div class="info-block">
+      <label>CURSOR</label>
+      <div class="info-val" id="info-cursor">–</div>
+    </div>
+    <div class="info-block">
+      <label>SELECTED TILE</label>
+      <div class="info-val" id="info-tile">–</div>
+    </div>
+    <div class="info-block">
+      <label>SPAWN (px)</label>
+      <div class="coord-row">
+        <input id="spawn-x" type="number" placeholder="X">
+        <input id="spawn-y" type="number" placeholder="Y">
+      </div>
+    </div>
+    <div class="info-block">
+      <label>EXIT (px)</label>
+      <div class="coord-row">
+        <input id="exit-x" type="number" placeholder="X">
+        <input id="exit-y" type="number" placeholder="Y">
+      </div>
+    </div>
+    <div class="info-block">
+      <label>ENTITIES</label>
+    </div>
+    <div id="entity-list"></div>
+  </div>
+</div>
+
+<!-- DROP OVERLAY -->
+<div id="drop-overlay">
+  <div class="drop-box" id="drop-box">
+    <div class="drop-title">POP·HAREM·EDITOR</div>
+    <div class="drop-sub">Drop your .jar file here or click to browse</div>
+    <label class="btn" for="file-input">SELECT .JAR FILE</label>
+  </div>
+  <input type="file" id="file-input" accept=".jar,.zip">
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const TW = 16, TH = 24, TCOLS = 14;
+const SCALE = 2;
+const ENTITY_COLORS = {
+  spawn:  '#00ff55', exit: '#50a0ff', door:  '#ffdc00',
+  guard:  '#ff4040', snake:'#c850ff', flame: '#ff8c00',
+  lever:  '#00dcdc', potion:'#78ff3c', trap:  '#c81e1e',
+  link:   '#00c896',
+};
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let tilesetImg = null;
+let tilesetCanvas = null;
+let levels = {};          // { n: levelData }
+let currentLevel = 0;
+let selectedTile = 4;     // tile index in palette
+let currentTool = 'draw';
+let showGrid = false;
+let showEntities = true;
+let painting = false;
+let undoStack = [];       // per-level undo stacks
+let redoStack = [];
+let selectedEntity = null;
+let addingEntityType = null;
+let draggingEntity = null;
+let dragOffset = {x:0,y:0};
+let zoom = SCALE;
+
+// ═══════════════════════════════════════════════════════
+// DOM REFS
+// ═══════════════════════════════════════════════════════
+const canvas     = document.getElementById('map-canvas');
+const ctx        = canvas.getContext('2d');
+const gridCvs    = document.getElementById('grid-overlay');
+const gridCtx    = gridCvs.getContext('2d');
+const dropOv     = document.getElementById('drop-overlay');
+const dropBox    = document.getElementById('drop-box');
+const fileInput  = document.getElementById('file-input');
+const statusBar  = document.getElementById('status-bar');
+const levelTabs  = document.getElementById('level-tabs');
+const palette    = document.getElementById('tile-palette');
+const entityList = document.getElementById('entity-list');
+
+// ═══════════════════════════════════════════════════════
+// PARSER
+// ═══════════════════════════════════════════════════════
+function parseLvl(raw) {
+  const u8 = new Uint8Array(raw);
+  let p = 0;
+  const rb = () => u8[p++];
+  const rs = () => { const v = u8[p] | (u8[p+1]<<8); p+=2; return v; };
+  const sp = v => v < 2000 ? v : v >> 8;
+
+  const map_w = rb(), map_h = rb();
+  const tiles = Array.from({length: map_w*map_h}, rb);
+
+  const np = rs(); for(let i=0;i<np;i++){rb();rb();rb();rb();} rs();
+  const nst = rs();
+  for(let i=0;i<nst;i++){rs();rb();}  // sub_953: 2+1 bytes each
+
+  const nobj = rs();
+  const objects = [];
+  for(let i=0;i<nobj;i++){
+    const x=rs(),y=rs(),si=rs(),fr=rb();
+    objects.push({x:sp(x),y:sp(y),si,fr});
+  }
+
+  const s = Array.from({length:6}, rs);
+  const spawn = {x:sp(s[0]), y:sp(s[1])};
+  const exit  = {x:sp(s[2]), y:sp(s[3])};
+  const doors = Array.from({length:2}, ()=>({x:sp(rs()),y:sp(rs())}));
+
+  const nfl=rs(); const flames=[];
+  for(let i=0;i<nfl;i++) flames.push({x:sp(rs()),y:sp(rs()),t:rb()});
+  const nsk=rs(); const snakes=[];
+  for(let i=0;i<nsk;i++) snakes.push({x:sp(rs()),y:sp(rs()),t:rb()});
+  const nlv=rs(); const levers=[];
+  for(let i=0;i<nlv;i++) levers.push({x:sp(rs()),y:sp(rs()),val:rs()});
+  const nli=rs(); const links=[];
+  for(let i=0;i<nli;i++) links.push({li:rs(),x:sp(rs()),y:sp(rs())});
+  const ngd=rs(); const guards=[];
+  for(let i=0;i<ngd;i++){
+    const x=rs(),y=rs(),f=rb(),hp=rb();rs();rs();rs();
+    guards.push({x:sp(x),y:sp(y),facing:f,hp});
+  }
+  const npt=rs(); const potions=[];
+  for(let i=0;i<npt;i++) potions.push({t:rb(),x:sp(rs()),y:sp(rs())});
+  const ntr=rs(); const traps=[];
+  for(let i=0;i<ntr;i++) traps.push({x:sp(rs()),y:sp(rs()),d:rb()});
+
+  return {map_w, map_h, tiles, objects, spawn, exit, doors,
+          flames, snakes, levers, links, guards, potions, traps};
+}
+
+// ═══════════════════════════════════════════════════════
+// SERIALIZER
+// ═══════════════════════════════════════════════════════
+function encodeLvl(d) {
+  // Encode sub_953 format: 2 bytes (01 00) + ASCII digit byte
+  // sprite_type indices are stored as: [0x01,0x00, idx+48]
+  // We reconstruct original sprite_types from objects
+  const usedSI = [...new Set(d.objects.map(o=>o.si))].sort((a,b)=>a-b);
+  const nst = usedSI.length;
+
+  const bytes = [];
+  const wb = v => bytes.push(v & 0xff);
+  const ws = v => { bytes.push(v & 0xff); bytes.push((v>>8)&0xff); };
+  const wsp = v => { const raw = v < 256 ? v : v*256; ws(raw); }; // coord->raw
+
+  wb(d.map_w); wb(d.map_h);
+  d.tiles.forEach(wb);
+
+  ws(0); ws(0); // n_patches=0, ignored=0
+  ws(nst);
+  usedSI.forEach(si => { ws(1); wb(si+48); }); // sub_953 format
+
+  ws(d.objects.length);
+  d.objects.forEach(o => { wsp(o.x); wsp(o.y); ws(o.si); wb(o.fr); });
+
+  // specials: x_spawn is direct px, y encoded as *256
+  ws(d.spawn.x); ws(d.spawn.y * 256);
+  ws(d.exit.x);  ws(d.exit.y * 256);
+  ws(0); ws(0); // var_759, var_787
+
+  d.doors.forEach(door => { wsp(door.x); wsp(door.y); });
+
+  ws(d.flames.length);
+  d.flames.forEach(f => { wsp(f.x); wsp(f.y); wb(f.t); });
+  ws(d.snakes.length);
+  d.snakes.forEach(s => { wsp(s.x); wsp(s.y); wb(s.t); });
+  ws(d.levers.length);
+  d.levers.forEach(l => { wsp(l.x); wsp(l.y); ws(l.val); });
+  ws(d.links.length);
+  d.links.forEach(l => { ws(l.li); wsp(l.x); wsp(l.y); });
+  ws(d.guards.length);
+  d.guards.forEach(g => {
+    wsp(g.x); wsp(g.y); wb(g.facing); wb(g.hp);
+    ws(1000); ws(1000); ws(1000); // default timers
+  });
+  ws(d.potions.length);
+  d.potions.forEach(pt => { wb(pt.t); wsp(pt.x); wsp(pt.y); });
+  ws(d.traps.length);
+  d.traps.forEach(t => { wsp(t.x); wsp(t.y); wb(t.d); });
+  ws(0); // final ignored
+
+  return new Uint8Array(bytes);
+}
+
+// ═══════════════════════════════════════════════════════
+// JAR LOADING
+// ═══════════════════════════════════════════════════════
+async function loadJar(file) {
+  setStatus('Reading JAR...');
+  try {
+    const zip = await JSZip.loadAsync(file);
+
+    // Find tileset
+    const tilesetEntry = zip.file('blocbank.png');
+    if (!tilesetEntry) throw new Error('blocbank.png not found in JAR');
+    const tileBlob = await tilesetEntry.async('blob');
+    await loadTileset(tileBlob);
+
+    // Find levels
+    let found = 0;
+    for(let n=0; n<=9; n++) {
+      const entry = zip.file(`${n}.lvl`);
+      if (entry) {
+        const ab = await entry.async('arraybuffer');
+        levels[n] = parseLvl(ab);
+        undoStack[n] = [];
+        redoStack[n] = [];
+        found++;
+      }
+    }
+    if (!found) throw new Error('No .lvl files found in JAR');
+
+    setStatus(`Loaded ${found} levels`);
+    buildLevelTabs();
+    buildPalette();
+    switchLevel(Object.keys(levels)[0]|0);
+    dropOv.style.display = 'none';
+  } catch(e) {
+    setStatus('Error: ' + e.message);
+    alert('Failed to load JAR:\n' + e.message);
+  }
+}
+
+function loadTileset(blob) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      tilesetImg = img;
+      // bake to canvas for fast pixel access
+      tilesetCanvas = document.createElement('canvas');
+      tilesetCanvas.width = img.width;
+      tilesetCanvas.height = img.height;
+      tilesetCanvas.getContext('2d').drawImage(img,0,0);
+      resolve();
+    };
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// UI BUILDERS
+// ═══════════════════════════════════════════════════════
+function buildLevelTabs() {
+  levelTabs.innerHTML = '';
+  Object.keys(levels).sort((a,b)=>a-b).forEach(n => {
+    const tab = document.createElement('div');
+    tab.className = 'level-tab';
+    tab.textContent = `LVL${n}`;
+    tab.dataset.n = n;
+    tab.onclick = () => switchLevel(n|0);
+    levelTabs.appendChild(tab);
+  });
+}
+
+function buildPalette() {
+  if (!tilesetCanvas) return;
+  palette.innerHTML = '';
+  const tctx = tilesetCanvas.getContext('2d');
+  for(let t=0; t<56; t++) {
+    const sx = (t%TCOLS)*TW, sy = Math.floor(t/TCOLS)*TH;
+    const c = document.createElement('canvas');
+    c.width = TW; c.height = TH;
+    c.getContext('2d').drawImage(tilesetCanvas, sx,sy,TW,TH, 0,0,TW,TH);
+    c.className = 'palette-tile' + (t===selectedTile?' selected':'');
+    c.dataset.tile = t;
+    c.title = `Tile ${t}`;
+    c.style.imageRendering = 'pixelated';
+    c.onclick = () => selectTile(t);
+    palette.appendChild(c);
+  }
+}
+
+function selectTile(t) {
+  selectedTile = t;
+  document.querySelectorAll('.palette-tile').forEach(el => {
+    el.classList.toggle('selected', +el.dataset.tile === t);
+  });
+  document.getElementById('info-tile').textContent = `#${t}`;
+  // auto-switch to draw tool
+  if(currentTool==='erase'||currentTool==='pick') setTool('draw');
+}
+
+function switchLevel(n) {
+  currentLevel = n;
+  document.querySelectorAll('.level-tab').forEach(t => {
+    t.classList.toggle('active', +t.dataset.n === n);
+  });
+  selectedEntity = null;
+  render();
+  updateRightPanel();
+  updateEntityList();
+}
+
+function buildLevelTabsDisabled() {
+  document.querySelectorAll('.level-tab').forEach(t => t.classList.remove('active'));
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════
+function render() {
+  const d = levels[currentLevel];
+  if (!d || !tilesetCanvas) return;
+
+  const W = d.map_w * TW * zoom;
+  const H = d.map_h * TH * zoom;
+  canvas.width = W; canvas.height = H;
+  ctx.imageSmoothingEnabled = false;
+
+  // tiles
+  for(let i=0; i<d.tiles.length; i++) {
+    const tx = i % d.map_w, ty = Math.floor(i/d.map_w);
+    drawTile(ctx, d.tiles[i], tx*TW*zoom, ty*TH*zoom, TW*zoom, TH*zoom);
+  }
+
+  // grid
+  renderGrid(d);
+
+  // entities
+  if(showEntities) renderEntities(ctx, d);
+
+  document.getElementById('info-size').textContent =
+    `${d.map_w}×${d.map_h}  (${d.map_w*TW}×${d.map_h*TH}px)`;
+}
+
+function drawTile(c, tid, x, y, w, h) {
+  const sx=(tid%TCOLS)*TW, sy=Math.floor(tid/TCOLS)*TH;
+  c.drawImage(tilesetCanvas, sx,sy,TW,TH, x,y,w,h);
+}
+
+function renderGrid(d) {
+  gridCvs.width = canvas.width; gridCvs.height = canvas.height;
+  if(!showGrid) { gridCtx.clearRect(0,0,gridCvs.width,gridCvs.height); return; }
+  gridCtx.clearRect(0,0,gridCvs.width,gridCvs.height);
+  gridCtx.strokeStyle = '#8888ff';
+  gridCtx.lineWidth = 0.5;
+  for(let x=0;x<=d.map_w;x++){
+    gridCtx.beginPath();
+    gridCtx.moveTo(x*TW*zoom,0); gridCtx.lineTo(x*TW*zoom,d.map_h*TH*zoom);
+    gridCtx.stroke();
+  }
+  for(let y=0;y<=d.map_h;y++){
+    gridCtx.beginPath();
+    gridCtx.moveTo(0,y*TH*zoom); gridCtx.lineTo(d.map_w*TW*zoom,y*TH*zoom);
+    gridCtx.stroke();
+  }
+}
+
+function renderEntities(c, d) {
+  const z = zoom;
+
+  // links first
+  c.strokeStyle = ENTITY_COLORS.link;
+  c.lineWidth = 1.5;
+  c.setLineDash([4,3]);
+  d.links.forEach(li => {
+    if(li.li < d.levers.length) {
+      const lv = d.levers[li.li];
+      c.beginPath();
+      c.moveTo(lv.x*z, lv.y*z); c.lineTo(li.x*z, li.y*z);
+      c.stroke();
+    }
+  });
+  c.setLineDash([]);
+
+  const dot = (x,y,color,r,label,sel) => {
+    const cx=x*z, cy=y*z;
+    c.beginPath(); c.arc(cx,cy,r*z,0,Math.PI*2);
+    c.fillStyle = color + (sel?'':'bb');
+    c.fill();
+    c.strokeStyle = '#000'; c.lineWidth=1; c.stroke();
+    if(label) {
+      c.fillStyle = color;
+      c.font = `bold ${9*z}px Share Tech Mono, monospace`;
+      c.fillText(label, cx+r*z+2, cy+3*z);
+    }
+  };
+
+  const cross = (x,y,color,sel) => {
+    const cx=x*z, cy=y*z, s=8*z;
+    c.strokeStyle = color; c.lineWidth = 2*z;
+    c.beginPath(); c.moveTo(cx-s,cy); c.lineTo(cx+s,cy); c.stroke();
+    c.beginPath(); c.moveTo(cx,cy-s); c.lineTo(cx,cy+s); c.stroke();
+    if(sel){c.strokeStyle='#fff';c.lineWidth=1*z;c.beginPath();c.arc(cx,cy,5*z,0,Math.PI*2);c.stroke();}
+  };
+
+  const isSel = e => selectedEntity && selectedEntity.ref === e;
+
+  cross(d.spawn.x, d.spawn.y, ENTITY_COLORS.spawn, isSel(d.spawn));
+  c.fillStyle=ENTITY_COLORS.spawn; c.font=`bold ${8*z}px Share Tech Mono,monospace`;
+  c.fillText('SPAWN', d.spawn.x*z+10*z, d.spawn.y*z-6*z);
+
+  cross(d.exit.x, d.exit.y, ENTITY_COLORS.exit, isSel(d.exit));
+  c.fillStyle=ENTITY_COLORS.exit; c.font=`bold ${8*z}px Share Tech Mono,monospace`;
+  c.fillText('EXIT', d.exit.x*z+10*z, d.exit.y*z-6*z);
+
+  d.doors.forEach((door,i)  => dot(door.x,door.y,  ENTITY_COLORS.door,  6, `D${i}`, isSel(door)));
+  d.flames.forEach((f,i)    => dot(f.x,f.y,         ENTITY_COLORS.flame, 5, `F${i}`, isSel(f)));
+  d.snakes.forEach((s,i)    => dot(s.x,s.y,         ENTITY_COLORS.snake, 5, `S${i}`, isSel(s)));
+  d.levers.forEach((l,i)    => dot(l.x,l.y,         ENTITY_COLORS.lever, 5, `L${i}`, isSel(l)));
+  d.links.forEach((l,i)     => dot(l.x,l.y,         ENTITY_COLORS.link,  4, `LP${i}`,isSel(l)));
+  d.guards.forEach((g,i)    => dot(g.x,g.y,         ENTITY_COLORS.guard, 6, `G${i}`,isSel(g)));
+  d.potions.forEach((pt,i)  => dot(pt.x,pt.y,       ENTITY_COLORS.potion,5, `P${pt.t}`,isSel(pt)));
+  d.traps.forEach((t,i)     => dot(t.x,t.y,         ENTITY_COLORS.trap,  5, `T${i}`, isSel(t)));
+}
+
+// ═══════════════════════════════════════════════════════
+// UNDO / REDO
+// ═══════════════════════════════════════════════════════
+function pushUndo() {
+  const d = levels[currentLevel];
+  undoStack[currentLevel].push(JSON.stringify(d.tiles));
+  redoStack[currentLevel] = [];
+  if(undoStack[currentLevel].length > 50) undoStack[currentLevel].shift();
+}
+
+function undo() {
+  const n=currentLevel, st=undoStack[n];
+  if(!st.length) return;
+  redoStack[n].push(JSON.stringify(levels[n].tiles));
+  levels[n].tiles = JSON.parse(st.pop());
+  render();
+}
+
+function redo() {
+  const n=currentLevel, rs2=redoStack[n];
+  if(!rs2.length) return;
+  undoStack[n].push(JSON.stringify(levels[n].tiles));
+  levels[n].tiles = JSON.parse(rs2.pop());
+  render();
+}
+
+// ═══════════════════════════════════════════════════════
+// TILE OPERATIONS
+// ═══════════════════════════════════════════════════════
+function tileAt(tx,ty) {
+  const d=levels[currentLevel];
+  if(tx<0||ty<0||tx>=d.map_w||ty>=d.map_h) return -1;
+  return d.tiles[ty*d.map_w+tx];
+}
+
+function setTileAt(tx,ty,val,noUndo) {
+  const d=levels[currentLevel];
+  if(tx<0||ty<0||tx>=d.map_w||ty>=d.map_h) return;
+  if(!noUndo && d.tiles[ty*d.map_w+tx]!==val) {}
+  d.tiles[ty*d.map_w+tx]=val;
+}
+
+function floodFill(tx,ty,newTile) {
+  const d=levels[currentLevel];
+  const target=tileAt(tx,ty);
+  if(target===newTile) return;
+  pushUndo();
+  const stack=[[tx,ty]];
+  while(stack.length){
+    const [x,y]=stack.pop();
+    if(x<0||y<0||x>=d.map_w||y>=d.map_h) continue;
+    if(d.tiles[y*d.map_w+x]!==target) continue;
+    d.tiles[y*d.map_w+x]=newTile;
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  render();
+}
+
+// ═══════════════════════════════════════════════════════
+// CANVAS MOUSE EVENTS
+// ═══════════════════════════════════════════════════════
+function canvasXY(e) {
+  const r = canvas.getBoundingClientRect();
+  const cx = (e.clientX - r.left) / zoom;
+  const cy = (e.clientY - r.top) / zoom;
+  return { cx, cy, tx: Math.floor(cx/TW), ty: Math.floor(cy/TH) };
+}
+
+let lastPaintTile = null;
+
+canvas.addEventListener('mousedown', e => {
+  if(e.button!==0) return;
+  const {cx,cy,tx,ty} = canvasXY(e);
+
+  if(currentTool==='entity' || addingEntityType) {
+    handleEntityClick(cx,cy,e);
+    return;
+  }
+
+  if(currentTool==='pick') {
+    const t=tileAt(tx,ty);
+    if(t>=0){selectTile(t);setTool('draw');}
+    return;
+  }
+
+  if(currentTool==='fill') {
+    floodFill(tx,ty,selectedTile);
+    return;
+  }
+
+  // check entity drag in entity mode
+  if(currentTool==='entity') return;
+
+  painting = true;
+  lastPaintTile = null;
+  pushUndo();
+  applyPaint(tx,ty);
+});
+
+canvas.addEventListener('mousemove', e => {
+  const {cx,cy,tx,ty} = canvasXY(e);
+  document.getElementById('info-cursor').textContent =
+    `tile(${tx},${ty})  px(${Math.round(cx)},${Math.round(cy)})`;
+
+  if(draggingEntity) {
+    draggingEntity.x = Math.round(cx - dragOffset.x);
+    draggingEntity.y = Math.round(cy - dragOffset.y);
+    render(); updateRightPanel(); updateEntityList();
+    return;
+  }
+
+  if(!painting) return;
+  if(lastPaintTile && lastPaintTile[0]===tx && lastPaintTile[1]===ty) return;
+  applyPaint(tx,ty);
+  lastPaintTile=[tx,ty];
+});
+
+canvas.addEventListener('mouseup', () => { painting=false; draggingEntity=null; });
+canvas.addEventListener('mouseleave', () => { painting=false; draggingEntity=null; });
+
+function applyPaint(tx,ty) {
+  const d=levels[currentLevel];
+  const tile = currentTool==='erase' ? 0 : selectedTile;
+  setTileAt(tx,ty,tile);
+  if(currentTool==='mirror') {
+    // mirror horizontally around center
+    const mx = d.map_w-1-tx;
+    setTileAt(mx,ty,tile);
+  }
+  render();
+}
+
+function handleEntityClick(cx,cy,e) {
+  const d=levels[currentLevel];
+  const R = 8/zoom;
+
+  // check if clicking existing entity to drag
+  const allEntities = [
+    ...d.doors.map(r=>({r,type:'door'})),
+    ...d.flames.map(r=>({r,type:'flame'})),
+    ...d.snakes.map(r=>({r,type:'snake'})),
+    ...d.levers.map(r=>({r,type:'lever'})),
+    ...d.links.map(r=>({r,type:'link'})),
+    ...d.guards.map(r=>({r,type:'guard'})),
+    ...d.potions.map(r=>({r,type:'potion'})),
+    ...d.traps.map(r=>({r,type:'trap'})),
+    {r:d.spawn,type:'spawn'},{r:d.exit,type:'exit'},
+  ];
+
+  if(addingEntityType) {
+    addEntity(addingEntityType, cx, cy);
+    return;
+  }
+
+  for(const {r,type} of allEntities) {
+    const dx=r.x-cx, dy=r.y-cy;
+    if(Math.sqrt(dx*dx+dy*dy)<R*2) {
+      selectedEntity={ref:r,type};
+      draggingEntity=r;
+      dragOffset={x:cx-r.x,y:cy-r.y};
+      render(); updateEntityList();
+      return;
+    }
+  }
+  selectedEntity=null; render(); updateEntityList();
+}
+
+function addEntity(type, cx, cy) {
+  const d=levels[currentLevel];
+  const x=Math.round(cx), y=Math.round(cy);
+  switch(type) {
+    case 'spawn': d.spawn={x,y}; break;
+    case 'exit':  d.exit={x,y}; break;
+    case 'door':  d.doors.push({x,y}); break;
+    case 'guard': d.guards.push({x,y,facing:0,hp:3}); break;
+    case 'snake': d.snakes.push({x,y,t:0}); break;
+    case 'flame': d.flames.push({x,y,t:0}); break;
+    case 'lever': d.levers.push({x,y,val:0}); break;
+    case 'potion':d.potions.push({t:1,x,y}); break;
+    case 'trap':  d.traps.push({x,y,d:0}); break;
+  }
+  addingEntityType=null;
+  document.querySelectorAll('.entity-btn').forEach(b=>b.classList.remove('active'));
+  render(); updateEntityList(); updateRightPanel();
+}
+
+// ═══════════════════════════════════════════════════════
+// RIGHT PANEL
+// ═══════════════════════════════════════════════════════
+function updateRightPanel() {
+  const d = levels[currentLevel];
+  if(!d) return;
+  document.getElementById('spawn-x').value = d.spawn.x;
+  document.getElementById('spawn-y').value = d.spawn.y;
+  document.getElementById('exit-x').value  = d.exit.x;
+  document.getElementById('exit-y').value  = d.exit.y;
+}
+
+function updateEntityList() {
+  const d=levels[currentLevel];
+  if(!d){entityList.innerHTML='';return;}
+  entityList.innerHTML='';
+  const add=(label,ref,type,arr,idx) => {
+    const el=document.createElement('div');
+    el.className='entity-item'+(selectedEntity&&selectedEntity.ref===ref?' selected':'');
+    el.innerHTML=`<span style="color:${ENTITY_COLORS[type]}">${label}</span>
+      <span style="color:#888;font-size:9px">(${ref.x},${ref.y})</span>
+      ${arr?`<span class="del" data-arr="${type}" data-idx="${idx}">✕</span>`:''}`;
+    el.onclick=ev=>{
+      if(ev.target.classList.contains('del')) return;
+      selectedEntity={ref,type}; render(); updateEntityList();
+    };
+    entityList.appendChild(el);
+    // delete button
+    el.querySelector('.del')?.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      arr.splice(idx,1);
+      selectedEntity=null; render(); updateEntityList();
+    });
+  };
+  add('SPAWN', d.spawn, 'spawn', null);
+  add('EXIT',  d.exit,  'exit',  null);
+  d.doors.forEach((r,i)  => add(`DOOR ${i}`,   r,'door',  d.doors,  i));
+  d.guards.forEach((r,i) => add(`GUARD ${i}`,  r,'guard', d.guards, i));
+  d.snakes.forEach((r,i) => add(`SNAKE ${i}`,  r,'snake', d.snakes, i));
+  d.flames.forEach((r,i) => add(`FLAME ${i}`,  r,'flame', d.flames, i));
+  d.levers.forEach((r,i) => add(`LEVER ${i}`,  r,'lever', d.levers, i));
+  d.links.forEach((r,i)  => add(`LINK ${i}`,   r,'link',  d.links,  i));
+  d.potions.forEach((r,i)=> add(`POTION ${i}`, r,'potion',d.potions,i));
+  d.traps.forEach((r,i)  => add(`TRAP ${i}`,   r,'trap',  d.traps,  i));
+}
+
+// ═══════════════════════════════════════════════════════
+// TOOLS
+// ═══════════════════════════════════════════════════════
+function setTool(t) {
+  currentTool=t;
+  document.querySelectorAll('.tool-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tool===t);
+  });
+  canvas.className = t==='erase'?'tool-erase':t==='fill'?'tool-fill':
+    t==='entity'?'tool-select':t==='mirror'?'tool-mirror':'';
+}
+document.querySelectorAll('.tool-btn').forEach(b=>{
+  b.onclick=()=>setTool(b.dataset.tool);
+});
+
+document.querySelectorAll('.entity-btn').forEach(b=>{
+  b.onclick=()=>{
+    if(addingEntityType===b.dataset.etype){
+      addingEntityType=null; b.classList.remove('active');
+    } else {
+      addingEntityType=b.dataset.etype;
+      document.querySelectorAll('.entity-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      setTool('entity');
+    }
+  };
+});
+
+// spawn/exit inputs
+['spawn-x','spawn-y','exit-x','exit-y'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>{
+    const d=levels[currentLevel]; if(!d) return;
+    d.spawn.x=+document.getElementById('spawn-x').value;
+    d.spawn.y=+document.getElementById('spawn-y').value;
+    d.exit.x =+document.getElementById('exit-x').value;
+    d.exit.y =+document.getElementById('exit-y').value;
+    render(); updateEntityList();
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// BUTTONS
+// ═══════════════════════════════════════════════════════
+document.getElementById('btn-grid').onclick=()=>{
+  showGrid=!showGrid;
+  document.getElementById('btn-grid').classList.toggle('active',showGrid);
+  render();
+};
+document.getElementById('btn-entities').onclick=()=>{
+  showEntities=!showEntities;
+  document.getElementById('btn-entities').classList.toggle('active',showEntities);
+  render();
+};
+document.getElementById('btn-undo').onclick=undo;
+document.getElementById('btn-redo').onclick=redo;
+document.getElementById('btn-load-new').onclick=()=>dropOv.style.display='flex';
+
+document.getElementById('btn-save').onclick=()=>{
+  const d=levels[currentLevel];
+  if(!d) return;
+  const bytes=encodeLvl(d);
+  const blob=new Blob([bytes],{type:'application/octet-stream'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${currentLevel}.lvl`;
+  a.click();
+  setStatus(`Saved ${currentLevel}.lvl (${bytes.length} bytes)`);
+};
+
+// ═══════════════════════════════════════════════════════
+// KEYBOARD
+// ═══════════════════════════════════════════════════════
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.ctrlKey&&e.key==='z'){undo();return;}
+  if(e.ctrlKey&&e.key==='y'){redo();return;}
+  if(e.ctrlKey&&e.key==='s'){document.getElementById('btn-save').click();return;}
+  const map={b:'draw',e:'erase',f:'fill',i:'pick',m:'mirror',v:'entity'};
+  if(map[e.key]) setTool(map[e.key]);
+  if(e.key==='g'){document.getElementById('btn-grid').click();}
+  // zoom
+  if(e.key==='+'){zoom=Math.min(zoom+1,6);render();}
+  if(e.key==='-'){zoom=Math.max(zoom-1,1);render();}
+});
+
+// ═══════════════════════════════════════════════════════
+// FILE DROP
+// ═══════════════════════════════════════════════════════
+dropBox.addEventListener('dragover', e=>{ e.preventDefault(); dropBox.classList.add('drag-over'); });
+dropBox.addEventListener('dragleave', ()=>dropBox.classList.remove('drag-over'));
+dropBox.addEventListener('drop', e=>{
+  e.preventDefault(); dropBox.classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];
+  if(file) loadJar(file);
+});
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) loadJar(fileInput.files[0]); });
+
+function setStatus(msg) {
+  statusBar.textContent = msg;
+}
+
+// Mouse wheel zoom
+document.getElementById('canvas-wrap').addEventListener('wheel', e=>{
+  if(!e.ctrlKey) return;
+  e.preventDefault();
+  zoom = Math.max(1, Math.min(6, zoom + (e.deltaY<0?1:-1)));
+  render();
+},{passive:false});
+</script>
+</body>
+</html>
