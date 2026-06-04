@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JavaTrans 1.4.5</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+JP&display=swap');
+
+  :root {
+    --bg:        #f0ede8;
+    --bg2:       #e4e0d8;
+    --bg3:       #d8d4cc;
+    --panel:     #faf8f5;
+    --border:    #b8b0a4;
+    --border2:   #ccc5bb;
+    --accent:    #4a7c59;
+    --accent2:   #3d6b4a;
+    --accent-lt: #d4e8d8;
+    --txt:       #2a2520;
+    --txt2:      #6b6560;
+    --txt3:      #9b9590;
+    --row-even:  #faf8f5;
+    --row-odd:   #f2efe8;
+    --row-edit:  #fffbe6;
+    --row-sel:   #c8dfd0;
+    --row-sel-b: #4a7c59;
+    --shadow:    rgba(0,0,0,0.10);
+    --mono:      'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--txt);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Barra de título ── */
+  .titlebar {
+    background: linear-gradient(180deg, #e8e4dc 0%, #d4cfc6 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 5px 10px 4px;
+    font-size: 12px;
+    color: var(--txt2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .titlebar-icon { font-size: 16px; }
+  .titlebar-name { font-weight: 600; color: var(--txt); }
+  .titlebar-file { color: var(--txt2); }
+
+  /* ── Menubar ── */
+  .menubar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+  .menu-item {
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--txt);
+    position: relative;
+  }
+  .menu-item:hover { background: var(--bg3); }
+  .menu-item.active { background: var(--bg3); }
+
+  .dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    min-width: 180px;
+    z-index: 100;
+    box-shadow: 2px 3px 8px var(--shadow);
+  }
+  .menu-item.active .dropdown { display: block; }
+  .dropdown-item {
+    padding: 5px 14px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--txt);
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .dropdown-item:hover { background: var(--row-sel); color: var(--row-sel-b); }
+  .dropdown-item.disabled { color: var(--txt3); cursor: default; }
+  .dropdown-item.disabled:hover { background: none; }
+  .dropdown-sep { border-top: 1px solid var(--border2); margin: 3px 0; }
+  .dropdown-item kbd { color: var(--txt3); font-size: 11px; }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .tb-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  .tb-btn {
+    width: 28px; height: 26px;
+    background: linear-gradient(180deg, #f0ede8 0%, #ddd8ce 100%);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    color: var(--txt);
+    transition: background 0.1s;
+    flex-shrink: 0;
+  }
+  .tb-btn:hover { background: linear-gradient(180deg, #fff 0%, #e8e4dc 100%); }
+  .tb-btn:active { background: linear-gradient(180deg, #d8d4cc 0%, #e8e4dc 100%); }
+  .tb-btn.accent {
+    background: linear-gradient(180deg, #6a9c79 0%, #4a7c59 100%);
+    border-color: #3d6b4a;
+    color: #fff;
+  }
+  .tb-btn.accent:hover { background: linear-gradient(180deg, #7aac89 0%, #5a8c69 100%); }
+
+  .search-wrap {
+    display: flex; align-items: center; gap: 3px;
+    margin-left: 8px;
+  }
+  .search-wrap label { font-size: 11px; color: var(--txt2); }
+  .search-input {
+    width: 160px; height: 22px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 0 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--txt);
+    border-radius: 2px;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-nav {
+    width: 20px; height: 22px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 2px;
+  }
+  .search-nav:hover { background: var(--bg3); }
+  .search-count { font-size: 11px; color: var(--txt3); min-width: 52px; }
+
+  /* ── Body principal ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  /* ── Painel lista ── */
+  .list-panel {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 2px;
+    box-shadow: inset 0 1px 3px var(--shadow);
+    min-height: 120px;
+  }
+  .list-header {
+    background: linear-gradient(180deg, #e8e4dc 0%, #d8d4cc 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--txt2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .list-header .badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 8px;
+  }
+
+  .list-cols {
+    display: grid;
+    grid-template-columns: 48px 1fr 1fr;
+    background: linear-gradient(180deg, #e0dcd4 0%, #d4cfc6 100%);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .list-col {
+    padding: 3px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--txt2);
+    border-right: 1px solid var(--border2);
+  }
+  .list-col:last-child { border-right: none; }
+
+  .list-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .list-body::-webkit-scrollbar { width: 12px; }
+  .list-body::-webkit-scrollbar-track { background: var(--bg2); }
+  .list-body::-webkit-scrollbar-thumb { background: var(--bg3); border: 2px solid var(--bg2); border-radius: 6px; }
+
+  .list-row {
+    display: grid;
+    grid-template-columns: 48px 1fr 1fr;
+    border-bottom: 1px solid var(--border2);
+    cursor: pointer;
+    transition: background 0.05s;
+    min-height: 22px;
+  }
+  .list-row:nth-child(even) { background: var(--row-even); }
+  .list-row:nth-child(odd)  { background: var(--row-odd); }
+  .list-row.edited { background: var(--row-edit); }
+  .list-row.selected {
+    background: var(--row-sel) !important;
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+  }
+  .list-row.search-match { background: #fff3c4 !important; }
+  .list-row.search-match.selected { background: var(--row-sel) !important; }
+
+  .list-cell {
+    padding: 2px 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-right: 1px solid var(--border2);
+    line-height: 18px;
+    align-self: center;
+  }
+  .list-cell:last-child { border-right: none; }
+  .cell-num {
+    color: var(--txt3);
+    text-align: right;
+    font-size: 11px;
+    user-select: none;
+  }
+  .cell-edited { color: #7a5c00; font-style: italic; }
+
+  /* ── Resize handle ── */
+  .resize-handle {
+    height: 5px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    cursor: ns-resize;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .resize-handle::after {
+    content: '· · · · ·';
+    font-size: 10px;
+    color: var(--txt3);
+    letter-spacing: 2px;
+  }
+
+  /* ── Painel editor ── */
+  .edit-panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    border-radius: 2px;
+    box-shadow: inset 0 1px 3px var(--shadow);
+    flex-shrink: 0;
+    height: 180px;
+    min-height: 80px;
+  }
+  .edit-header {
+    background: linear-gradient(180deg, #e8e4dc 0%, #d8d4cc 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--txt2);
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .edit-header .edit-ref {
+    font-size: 10px;
+    color: var(--txt3);
+    font-weight: 400;
+  }
+  .edit-header .edit-status {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 400;
+  }
+
+  .edit-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  .edit-orig-wrap, .edit-trans-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .edit-orig-wrap {
+    border-right: 1px solid var(--border2);
+  }
+  .edit-sublabel {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border2);
+    padding: 2px 8px;
+    font-size: 10px;
+    color: var(--txt3);
+    flex-shrink: 0;
+  }
+  .edit-orig {
+    flex: 1;
+    padding: 6px 8px;
+    font-family: 'Noto Sans JP', var(--mono);
+    font-size: 12px;
+    color: var(--txt2);
+    overflow-y: auto;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #f5f2ec;
+    user-select: text;
+  }
+  .edit-textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 6px 8px;
+    font-family: 'Noto Sans JP', var(--mono);
+    font-size: 12px;
+    color: var(--txt);
+    background: #fffef8;
+    resize: none;
+    line-height: 1.6;
+  }
+  .edit-textarea:focus { background: #fffef0; }
+
+  /* ── Rodapé ── */
+  .footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .footer-btn {
+    height: 26px;
+    padding: 0 14px;
+    background: linear-gradient(180deg, #f0ede8 0%, #ddd8ce 100%);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--txt);
+    transition: background 0.1s;
+  }
+  .footer-btn:hover { background: linear-gradient(180deg, #fff 0%, #e8e4dc 100%); }
+  .footer-btn.primary {
+    background: linear-gradient(180deg, #6a9c79 0%, #4a7c59 100%);
+    border-color: #3d6b4a;
+    color: #fff;
+    font-weight: 600;
+  }
+  .footer-btn.primary:hover { background: linear-gradient(180deg, #7aac89 0%, #5a8c69 100%); }
+  .footer-btn.danger {
+    background: linear-gradient(180deg, #c47a7a 0%, #a45a5a 100%);
+    border-color: #8a4040;
+    color: #fff;
+  }
+
+  .lang-select {
+    height: 26px;
+    padding: 0 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--txt);
+    cursor: pointer;
+    outline: none;
+  }
+  .lang-arrow {
+    font-size: 14px;
+    color: var(--txt2);
+  }
+  .footer-status {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--txt3);
+  }
+  .footer-status span { color: var(--accent); font-weight: 600; }
+
+  /* ── Modo badge ── */
+  .mode-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--accent-lt);
+    color: var(--accent2);
+    border: 1px solid #a8c8b0;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--txt3);
+    font-size: 12px;
+    padding: 24px;
+  }
+  .empty-state .icon { font-size: 32px; opacity: 0.4; }
+  .empty-state .hint {
+    font-size: 11px;
+    color: var(--txt3);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* ── Notificação ── */
+  .toast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #2a2520;
+    color: #f0ede8;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Drop overlay ── */
+  .drop-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(74,124,89,0.15);
+    border: 3px dashed var(--accent);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .drop-overlay.active { display: flex; }
+
+  /* Scrollbar global */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border: 2px solid var(--bg2); border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<!-- Drop overlay -->
+<div class="drop-overlay" id="dropOverlay">⬇ Solte o arquivo aqui</div>
+
+<!-- Barra de título -->
+<div class="titlebar">
+  <span class="titlebar-icon"></span>
+  <span class="titlebar-name">JavaTrans 1.4.5</span>
+  <span class="titlebar-file" id="titleFile">— nenhum arquivo</span>
+  <span id="modeBadge"></span>
+</div>
+
+<!-- Menubar -->
+<div class="menubar" id="menubar">
+  <div class="menu-item" data-menu="arquivo">Arquivo
+    <div class="dropdown">
+      <div class="dropdown-item" onclick="openFile()">Abrir… <kbd>Ctrl+O</kbd></div>
+      <div class="dropdown-item" id="menuSave" onclick="saveFile()" >Salvar <kbd>Ctrl+S</kbd></div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item" id="menuExport" onclick="exportTxt()">Exportar .txt</div>
+      <div class="dropdown-item" id="menuImport" onclick="importTxt()">Importar .txt</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item" onclick="closeMenu()">Fechar</div>
+    </div>
+  </div>
+  <div class="menu-item" data-menu="editar">Editar
+    <div class="dropdown">
+      <div class="dropdown-item" onclick="commitEdit()">Confirmar <kbd>Enter</kbd></div>
+      <div class="dropdown-item" onclick="revertEdit()">Reverter</div>
+      <div class="dropdown-sep"></div>
+      <div class="dropdown-item" onclick="selectAll()">Selecionar todos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <button class="tb-btn" title="Abrir arquivo (Ctrl+O)" onclick="openFile()">📂</button>
+  <button class="tb-btn accent" title="Salvar (Ctrl+S)" onclick="saveFile()">💾</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" title="Exportar .txt" onclick="exportTxt()">📤</button>
+  <button class="tb-btn" title="Importar .txt" onclick="importTxt()">📥</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" title="Reverter selecionado" onclick="revertEdit()">↩</button>
+  <div class="tb-sep"></div>
+  <div class="search-wrap">
+    <label>Buscar:</label>
+    <input class="search-input" id="searchInput" placeholder="texto…"
+           oninput="doSearch()" onkeydown="searchKeydown(event)">
+    <button class="search-nav" onclick="searchNav(-1)" title="Anterior">▲</button>
+    <button class="search-nav" onclick="searchNav(1)" title="Próximo">▼</button>
+    <span class="search-count" id="searchCount"></span>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main" id="mainArea">
+
+  <!-- Lista -->
+  <div class="list-panel" id="listPanel">
+    <div class="list-header">
+      Selecione o texto:
+      <span class="badge" id="countBadge">0</span>
+      <span id="editedBadge" style="font-size:11px;color:var(--accent);font-weight:400;"></span>
+    </div>
+    <div class="list-cols">
+      <div class="list-col">#</div>
+      <div class="list-col">Original</div>
+      <div class="list-col">Tradução</div>
+    </div>
+    <div class="list-body" id="listBody">
+      <div class="empty-state" id="emptyState">
+        <div class="icon"></div>
+        <div>Nenhum arquivo aberto</div>
+        <div class="hint">Arraste um arquivo .jar, .class ou binário<br>ou use Arquivo → Abrir</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resize handle -->
+  <div class="resize-handle" id="resizeHandle"></div>
+
+  <!-- Editor -->
+  <div class="edit-panel" id="editPanel">
+    <div class="edit-header">
+      Tradução:
+      <span class="edit-ref" id="editRef"></span>
+      <span class="edit-status" id="editStatus"></span>
+    </div>
+    <div class="edit-body">
+      <div class="edit-orig-wrap">
+        <div class="edit-sublabel">Original</div>
+        <div class="edit-orig" id="editOrig"></div>
+      </div>
+      <div class="edit-trans-wrap">
+        <div class="edit-sublabel">Tradução</div>
+        <textarea class="edit-textarea" id="editTextarea"
+                  placeholder="Digite a tradução aqui…"
+                  onkeydown="editorKeydown(event)"
+                  oninput="editorChanged()"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rodapé -->
+<div class="footer">
+  <button class="footer-btn primary" onclick="commitEdit()">✔ Aplicar</button>
+  <button class="footer-btn" onclick="revertEdit()">↩ Reverter</button>
+  <div class="tb-sep"></div>
+  <select class="lang-select" id="langFrom">
+    <option value="Chinese">Chinese</option>
+    <option value="English">English</option>
+    <option value="Japanese">Japanese</option>
+    <option value="Korean">Korean</option>
+    <option value="Russian">Russian</option>
+    <option value="French">French</option>
+    <option value="German">German</option>
+    <option value="Polish">Polish</option>
+  </select>
+  <span class="lang-arrow">→</span>
+  <select class="lang-select" id="langTo">
+    <option value="pt">Português</option>
+    <option value="en">English</option>
+    <option value="Russian">Russian</option>
+    <option value="Spanish">Spanish</option>
+    <option value="French">French</option>
+    <option value="German">German</option>
+  </select>
+  <button class="footer-btn" onclick="autoTranslate()">⚡ Auto-traduzir</button>
+  <div class="footer-status" id="footerStatus">
+    <span id="statusEdits">0</span> edições · <span id="statusTotal">0</span> strings
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Input de arquivo oculto -->
+<input type="file" id="fileInput" style="display:none"
+       accept=".jar,.class,.bin,.pak,.dat,.res"
+       onchange="handleFileInput(event)">
+<input type="file" id="txtInput" style="display:none"
+       accept=".txt" onchange="handleImport(event)">
+
+<script>
+// ──────────────────────────────────────────────
+//  Estado global
+// ──────────────────────────────────────────────
+const state = {
+  mode: null,         // 'jar' | 'class' | 'binary'
+  filename: '',
+  items: [],          // [{label, original, meta}]
+  edits: {},          // {index: nova_string}
+  selectedIdx: null,
+  searchResults: [],
+  searchPos: -1,
+  fileBytes: null,    // ArrayBuffer do arquivo
+  // Modo binary
+  binEntries: [],     // [{start, end, str}]
+  // Modo class/jar
+  classEntries: [],   // [{cpIndex, str, offset}]
+};
+
+// ──────────────────────────────────────────────
+//  MUTF-8
+// ──────────────────────────────────────────────
+
+function decodeMutf8(bytes) {
+  let result = '';
+  let i = 0;
+  while (i < bytes.length) {
+    const b = bytes[i];
+    if (b === 0) throw new Error('Byte nulo direto em MUTF-8');
+    else if (b < 0x80) { result += String.fromCharCode(b); i++; }
+    else if ((b & 0xE0) === 0xC0) {
+      if (i + 1 >= bytes.length) throw new Error('Seq incompleta');
+      const b2 = bytes[i+1];
+      result += String.fromCharCode(((b & 0x1F) << 6) | (b2 & 0x3F));
+      i += 2;
+    } else if ((b & 0xF0) === 0xE0) {
+      if (i + 2 >= bytes.length) throw new Error('Seq incompleta');
+      const b2 = bytes[i+1], b3 = bytes[i+2];
+      result += String.fromCharCode(((b & 0x0F) << 12) | ((b2 & 0x3F) << 6) | (b3 & 0x3F));
+      i += 3;
+    } else throw new Error(`Byte inválido: ${b}`);
+  }
+  return result;
+}
+
+function encodeMutf8(str) {
+  const out = [];
+  for (const ch of str) {
+    const cp = ch.codePointAt(0);
+    if (cp === 0) { out.push(0xC0, 0x80); }
+    else if (cp < 0x80) { out.push(cp); }
+    else if (cp < 0x800) { out.push(0xC0 | (cp >> 6), 0x80 | (cp & 0x3F)); }
+    else { out.push(0xE0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F)); }
+  }
+  return new Uint8Array(out);
+}
+
+function writeMutf8(str) {
+  const enc = encodeMutf8(str);
+  const out = new Uint8Array(2 + enc.length);
+  out[0] = (enc.length >> 8) & 0xFF;
+  out[1] = enc.length & 0xFF;
+  out.set(enc, 2);
+  return out;
+}
+
+// ──────────────────────────────────────────────
+//  Constantes do constant pool
+// ──────────────────────────────────────────────
+const CP = {
+  Utf8:1, Integer:3, Float:4, Long:5, Double:6,
+  Class:7, String:8, Fieldref:9, Methodref:10,
+  InterfaceMethodref:11, NameAndType:12,
+  MethodHandle:15, MethodType:16, InvokeDynamic:18
+};
+
+// ──────────────────────────────────────────────
+//  Parser de .class
+// ──────────────────────────────────────────────
+
+function parseClass(bytes) {
+  const view = new DataView(bytes.buffer || bytes);
+  const magic = view.getUint32(0);
+  if (magic !== 0xCAFEBABE) throw new Error(`Magic inválido: ${magic.toString(16)}`);
+
+  let pos = 8;
+  const cpCount = view.getUint16(pos); pos += 2;
+  const entries = []; // {cpIndex, str, dataOffset}
+
+  let i = 1;
+  while (i < cpCount) {
+    const tag = bytes[pos]; pos++;
+    if (tag === CP.Utf8) {
+      const len = view.getUint16(pos);
+      const dataOffset = pos;
+      pos += 2;
+      const raw = bytes.slice(pos, pos + len);
+      pos += len;
+      try {
+        const str = decodeMutf8(raw);
+        entries.push({ cpIndex: i, str, dataOffset });
+      } catch(e) {}
+    } else if ([CP.Integer, CP.Float, CP.Fieldref, CP.Methodref,
+                CP.InterfaceMethodref, CP.NameAndType].includes(tag)) {
+      pos += 4;
+    } else if (tag === CP.Long || tag === CP.Double) {
+      pos += 8; i++;
+    } else if ([CP.Class, CP.String, CP.MethodType].includes(tag)) {
+      pos += 2;
+    } else if (tag === CP.MethodHandle) {
+      pos += 3;
+    } else if (tag === CP.InvokeDynamic) {
+      pos += 4;
+    } else {
+      throw new Error(`Tag desconhecida: ${tag} no índice ${i}`);
+    }
+    i++;
+  }
+  return entries;
+}
+
+// ──────────────────────────────────────────────
+//  Varredura binária genérica
+// ──────────────────────────────────────────────
+
+function scanBinary(bytes, minLen = 1, maxLen = 32767) {
+  const view = new DataView(bytes.buffer || bytes);
+  const results = [];
+  let i = 0;
+  while (i < bytes.length - 2) {
+    const len = view.getUint16(i);
+    if (len >= minLen && len <= maxLen && i + 2 + len <= bytes.length) {
+      const raw = bytes.slice(i + 2, i + 2 + len);
+      try {
+        const str = decodeMutf8(raw);
+        if ([...str].some(c => c.trim() !== '' && c.charCodeAt(0) > 31)) {
+          results.push({ start: i, end: i + 2 + len, str });
+          i = i + 2 + len;
+          continue;
+        }
+      } catch(e) {}
+    }
+    i++;
+  }
+  return results;
+}
+
+// ──────────────────────────────────────────────
+//  Carregar arquivo
+// ──────────────────────────────────────────────
+
+async function loadFile(file) {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const name = file.name;
+  const ext = name.split('.').pop().toLowerCase();
+
+  state.filename = name;
+  state.items = [];
+  state.edits = {};
+  state.selectedIdx = null;
+  state.fileBytes = bytes;
+  state.binEntries = [];
+  state.classEntries = [];
+
+  if (ext === 'jar') {
+    await loadJar(bytes);
+  } else if (ext === 'class') {
+    loadClass(bytes, name);
+  } else {
+    loadBinary(bytes);
+  }
+
+  renderList();
+  updateStatus();
+  document.getElementById('titleFile').textContent = `— ${name}`;
+  const modeLabels = { jar: 'JAR/.class', class: '.class', binary: 'Binário' };
+  const badge = document.getElementById('modeBadge');
+  badge.innerHTML = `<span class="mode-badge">${modeLabels[state.mode]}</span>`;
+  showToast(`${state.items.length} strings carregadas`);
+}
+
+async function loadJar(bytes) {
+  state.mode = 'jar';
+  // Usa JSZip via CDN
+  if (typeof JSZip === 'undefined') {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+  }
+  const zip = await JSZip.loadAsync(bytes);
+  for (const [path, zipEntry] of Object.entries(zip.files)) {
+    if (path.endsWith('.class')) {
+      try {
+        const data = await zipEntry.async('uint8array');
+        const entries = parseClass(data);
+        entries.forEach(e => {
+          state.items.push({ label: `[${path}] #${e.cpIndex}`, original: e.str, meta: { type:'jar', path, cpIndex: e.cpIndex } });
+        });
+      } catch(e) {}
+    }
+  }
+}
+
+function loadClass(bytes, name) {
+  state.mode = 'class';
+  const entries = parseClass(bytes);
+  entries.forEach(e => {
+    state.items.push({ label: `#${e.cpIndex}`, original: e.str, meta: { type:'class', cpIndex: e.cpIndex } });
+  });
+  state.classEntries = entries;
+}
+
+function loadBinary(bytes) {
+  state.mode = 'binary';
+  const entries = scanBinary(bytes);
+  state.binEntries = entries;
+  entries.forEach((e, i) => {
+    state.items.push({ label: `@${e.start.toString(16).padStart(8,'0')}`, original: e.str, meta: { type:'binary', binIdx: i } });
+  });
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+// ──────────────────────────────────────────────
+//  Renderização da lista
+// ──────────────────────────────────────────────
+
+function renderList() {
+  const body = document.getElementById('listBody');
+  const empty = document.getElementById('emptyState');
+
+  if (!state.items.length) {
+    body.innerHTML = '';
+    body.appendChild(empty);
+    return;
+  }
+
+  body.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
+  state.items.forEach((item, i) => {
+    const current = state.edits[i] ?? item.original;
+    const edited = i in state.edits;
+    const isSearch = state.searchResults.includes(i);
+    const isSel = state.selectedIdx === i;
+
+    const row = document.createElement('div');
+    row.className = 'list-row' +
+      (edited ? ' edited' : '') +
+      (isSearch ? ' search-match' : '') +
+      (isSel ? ' selected' : '');
+    row.dataset.idx = i;
+    row.onclick = () => selectItem(i);
+
+    row.innerHTML = `
+      <div class="list-cell cell-num">${i + 1}</div>
+      <div class="list-cell">${esc(item.original)}</div>
+      <div class="list-cell ${edited ? 'cell-edited' : ''}">${esc(current)}</div>
+    `;
+    frag.appendChild(row);
+  });
+
+  body.appendChild(frag);
+  document.getElementById('countBadge').textContent = state.items.length;
+}
+
+function refreshRow(i) {
+  const row = document.querySelector(`.list-row[data-idx="${i}"]`);
+  if (!row) return;
+  const item = state.items[i];
+  const current = state.edits[i] ?? item.original;
+  const edited = i in state.edits;
+  row.className = 'list-row' +
+    (edited ? ' edited' : '') +
+    (state.searchResults.includes(i) ? ' search-match' : '') +
+    (state.selectedIdx === i ? ' selected' : '');
+  row.children[2].textContent = current;
+  row.children[2].className = `list-cell ${edited ? 'cell-edited' : ''}`;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ──────────────────────────────────────────────
+//  Seleção e editor
+// ──────────────────────────────────────────────
+
+function selectItem(i) {
+  // Auto-commit item anterior
+  if (state.selectedIdx !== null && state.selectedIdx !== i) {
+    autoCommit(state.selectedIdx);
+  }
+
+  // Deselect anterior
+  if (state.selectedIdx !== null) {
+    refreshRow(state.selectedIdx);
+  }
+
+  state.selectedIdx = i;
+  refreshRow(i);
+  scrollToRow(i);
+  loadEditor(i);
+}
+
+function scrollToRow(i) {
+  const row = document.querySelector(`.list-row[data-idx="${i}"]`);
+  if (row) row.scrollIntoView({ block: 'nearest' });
+}
+
+function loadEditor(i) {
+  const item = state.items[i];
+  const current = state.edits[i] ?? item.original;
+  document.getElementById('editOrig').textContent = item.original;
+  document.getElementById('editTextarea').value = current;
+  document.getElementById('editRef').textContent = item.label;
+  document.getElementById('editStatus').textContent = (i in state.edits) ? '✎ editado' : '';
+  document.getElementById('editTextarea').focus();
+}
+
+function autoCommit(i) {
+  const val = document.getElementById('editTextarea').value;
+  const item = state.items[i];
+  if (val !== item.original) state.edits[i] = val;
+  else delete state.edits[i];
+  refreshRow(i);
+  updateStatus();
+}
+
+function commitEdit() {
+  if (state.selectedIdx === null) return;
+  autoCommit(state.selectedIdx);
+  const i = state.selectedIdx;
+  document.getElementById('editStatus').textContent = (i in state.edits) ? '✎ editado' : '';
+  updateStatus();
+  // Avança para o próximo
+  const next = i + 1;
+  if (next < state.items.length) selectItem(next);
+}
+
+function revertEdit() {
+  if (state.selectedIdx === null) return;
+  const i = state.selectedIdx;
+  delete state.edits[i];
+  const item = state.items[i];
+  document.getElementById('editTextarea').value = item.original;
+  document.getElementById('editStatus').textContent = '';
+  refreshRow(i);
+  updateStatus();
+}
+
+function editorChanged() {
+  // Marca visualmente sem commitar ainda
+  const i = state.selectedIdx;
+  if (i === null) return;
+  const val = document.getElementById('editTextarea').value;
+  const item = state.items[i];
+  document.getElementById('editStatus').textContent = val !== item.original ? '✎ editando…' : '';
+}
+
+function editorKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    commitEdit();
+  }
+}
+
+function selectAll() {
+  state.items.forEach((_, i) => {
+    const current = state.edits[i] ?? state.items[i].original;
+    state.edits[i] = current;
+  });
+  renderList();
+  updateStatus();
+}
+
+// ──────────────────────────────────────────────
+//  Busca
+// ──────────────────────────────────────────────
+
+function doSearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  state.searchResults = [];
+  state.searchPos = -1;
+
+  if (!q) {
+    document.getElementById('searchCount').textContent = '';
+    renderList();
+    return;
+  }
+
+  state.items.forEach((item, i) => {
+    const current = state.edits[i] ?? item.original;
+    if (item.original.toLowerCase().includes(q) || current.toLowerCase().includes(q)) {
+      state.searchResults.push(i);
+    }
+  });
+
+  renderList();
+  document.getElementById('searchCount').textContent =
+    state.searchResults.length ? `1/${state.searchResults.length}` : '0';
+
+  if (state.searchResults.length) {
+    state.searchPos = 0;
+    selectItem(state.searchResults[0]);
+  }
+}
+
+function searchNav(dir) {
+  if (!state.searchResults.length) return;
+  state.searchPos = (state.searchPos + dir + state.searchResults.length) % state.searchResults.length;
+  document.getElementById('searchCount').textContent =
+    `${state.searchPos + 1}/${state.searchResults.length}`;
+  selectItem(state.searchResults[state.searchPos]);
+}
+
+function searchKeydown(e) {
+  if (e.key === 'Enter') searchNav(e.shiftKey ? -1 : 1);
+}
+
+// ──────────────────────────────────────────────
+//  Salvar
+// ──────────────────────────────────────────────
+
+async function saveFile() {
+  if (!state.items.length) return;
+
+  let outBytes;
+  if (state.mode === 'jar') {
+    outBytes = await saveJar();
+  } else if (state.mode === 'class') {
+    outBytes = saveClass();
+  } else {
+    outBytes = saveBinary();
+  }
+
+  if (!outBytes) return;
+  downloadBytes(outBytes, state.filename);
+  showToast('Arquivo salvo!');
+}
+
+async function saveJar() {
+  if (typeof JSZip === 'undefined') return null;
+
+  // Agrupa edições por .class
+  const classChanges = {};
+  state.items.forEach((item, i) => {
+    if (i in state.edits && item.meta.type === 'jar') {
+      const { path, cpIndex } = item.meta;
+      (classChanges[path] = classChanges[path] || {})[cpIndex] = state.edits[i];
+    }
+  });
+
+  const zip = await JSZip.loadAsync(state.fileBytes);
+  for (const [path, changes] of Object.entries(classChanges)) {
+    const data = await zip.file(path).async('uint8array');
+    const newData = rewriteClass(data, changes);
+    zip.file(path, newData);
+  }
+  return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+
+function saveClass() {
+  const changes = {};
+  state.items.forEach((item, i) => {
+    if (i in state.edits) changes[item.meta.cpIndex] = state.edits[i];
+  });
+  return rewriteClass(state.fileBytes, changes);
+}
+
+function rewriteClass(bytes, changes) {
+  const view = new DataView(bytes.buffer || bytes);
+  const out = [];
+  const pushBytes = (arr) => { for (const b of arr) out.push(b); };
+
+  pushBytes(bytes.slice(0, 8));
+
+  let pos = 8;
+  const cpCount = view.getUint16(pos);
+  out.push((cpCount >> 8) & 0xFF, cpCount & 0xFF);
+  pos += 2;
+
+  let i = 1;
+  while (i < cpCount) {
+    const tag = bytes[pos]; pos++;
+    out.push(tag);
+
+    if (tag === CP.Utf8) {
+      const len = view.getUint16(pos); pos += 2;
+      const raw = bytes.slice(pos, pos + len); pos += len;
+      const cpIdx = i;
+      if (cpIdx in changes) {
+        const newRaw = encodeMutf8(changes[cpIdx]);
+        out.push((newRaw.length >> 8) & 0xFF, newRaw.length & 0xFF);
+        pushBytes(newRaw);
+      } else {
+        out.push((len >> 8) & 0xFF, len & 0xFF);
+        pushBytes(raw);
+      }
+    } else if ([CP.Integer, CP.Float, CP.Fieldref, CP.Methodref,
+                CP.InterfaceMethodref, CP.NameAndType].includes(tag)) {
+      pushBytes(bytes.slice(pos, pos + 4)); pos += 4;
+    } else if (tag === CP.Long || tag === CP.Double) {
+      pushBytes(bytes.slice(pos, pos + 8)); pos += 8; i++;
+    } else if ([CP.Class, CP.String, CP.MethodType].includes(tag)) {
+      pushBytes(bytes.slice(pos, pos + 2)); pos += 2;
+    } else if (tag === CP.MethodHandle) {
+      pushBytes(bytes.slice(pos, pos + 3)); pos += 3;
+    } else if (tag === CP.InvokeDynamic) {
+      pushBytes(bytes.slice(pos, pos + 4)); pos += 4;
+    }
+    i++;
+  }
+  pushBytes(bytes.slice(pos));
+  return new Uint8Array(out);
+}
+
+function saveBinary() {
+  const newStrings = state.items.map((item, i) => state.edits[i] ?? item.original);
+  const entries = state.binEntries;
+  const out = [];
+  let pos = 0;
+  for (let i = 0; i < entries.length; i++) {
+    const { start, end } = entries[i];
+    for (let j = pos; j < start; j++) out.push(state.fileBytes[j]);
+    const encoded = writeMutf8(newStrings[i]);
+    for (const b of encoded) out.push(b);
+    pos = end;
+  }
+  for (let j = pos; j < state.fileBytes.length; j++) out.push(state.fileBytes[j]);
+  return new Uint8Array(out);
+}
+
+function downloadBytes(bytes, filename) {
+  const blob = new Blob([bytes], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ──────────────────────────────────────────────
+//  Export / Import .txt
+// ──────────────────────────────────────────────
+
+function exportTxt() {
+  if (!state.items.length) return;
+  const lines = state.items.map((item, i) => state.edits[i] ?? item.original);
+  const txt = lines.join('\r\n');
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = state.filename + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${lines.length} strings exportadas`);
+}
+
+function importTxt() {
+  document.getElementById('txtInput').click();
+}
+
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file || !state.items.length) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const lines = ev.target.result.split(/\r?\n/);
+    const count = Math.min(lines.length, state.items.length);
+    for (let i = 0; i < count; i++) {
+      if (lines[i] !== state.items[i].original) state.edits[i] = lines[i];
+    }
+    renderList();
+    updateStatus();
+    showToast(`${count} strings importadas`);
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+}
+
+// ──────────────────────────────────────────────
+//  Auto-tradução (placeholder)
+// ──────────────────────────────────────────────
+
+function autoTranslate() {
+  if (state.selectedIdx === null) return;
+  showToast('Auto-tradução: conecte uma API de tradução para usar este recurso');
+}
+
+// ──────────────────────────────────────────────
+//  UI helpers
+// ──────────────────────────────────────────────
+
+function updateStatus() {
+  const editCount = Object.keys(state.edits).length;
+  document.getElementById('statusEdits').textContent = editCount;
+  document.getElementById('statusTotal').textContent = state.items.length;
+  document.getElementById('editedBadge').textContent =
+    editCount ? `· ${editCount} editadas` : '';
+}
+
+function showToast(msg, duration = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ──────────────────────────────────────────────
+//  Abrir arquivo
+// ──────────────────────────────────────────────
+
+function openFile() {
+  closeMenu();
+  document.getElementById('fileInput').click();
+}
+
+async function handleFileInput(e) {
+  const file = e.target.files[0];
+  if (file) await loadFile(file);
+  e.target.value = '';
+}
+
+// ──────────────────────────────────────────────
+//  Drag & drop
+// ──────────────────────────────────────────────
+
+document.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  document.getElementById('dropOverlay').classList.add('active');
+});
+document.addEventListener('dragleave', (e) => {
+  if (!e.relatedTarget) document.getElementById('dropOverlay').classList.remove('active');
+});
+document.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  document.getElementById('dropOverlay').classList.remove('active');
+  const file = e.dataTransfer.files[0];
+  if (file) await loadFile(file);
+});
+
+// ──────────────────────────────────────────────
+//  Menu
+// ──────────────────────────────────────────────
+
+document.querySelectorAll('.menu-item').forEach(item => {
+  item.addEventListener('click', (e) => {
+    const wasActive = item.classList.contains('active');
+    closeMenu();
+    if (!wasActive) item.classList.add('active');
+    e.stopPropagation();
+  });
+});
+document.addEventListener('click', closeMenu);
+function closeMenu() {
+  document.querySelectorAll('.menu-item.active').forEach(m => m.classList.remove('active'));
+}
+
+// ──────────────────────────────────────────────
+//  Resize handle
+// ──────────────────────────────────────────────
+
+(function() {
+  const handle = document.getElementById('resizeHandle');
+  const listPanel = document.getElementById('listPanel');
+  const editPanel = document.getElementById('editPanel');
+  let dragging = false, startY = 0, startListH = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startY = e.clientY;
+    startListH = listPanel.getBoundingClientRect().height;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ns-resize';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const delta = e.clientY - startY;
+    const newH = Math.max(80, startListH + delta);
+    listPanel.style.flex = 'none';
+    listPanel.style.height = newH + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    dragging = false;
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  });
+})();
+
+// ──────────────────────────────────────────────
+//  Atalhos globais
+// ──────────────────────────────────────────────
+
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'o') { e.preventDefault(); openFile(); }
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveFile(); }
+  if (e.key === 'ArrowDown' && state.selectedIdx !== null && document.activeElement !== document.getElementById('editTextarea')) {
+    e.preventDefault();
+    const next = Math.min(state.selectedIdx + 1, state.items.length - 1);
+    selectItem(next);
+  }
+  if (e.key === 'ArrowUp' && state.selectedIdx !== null && document.activeElement !== document.getElementById('editTextarea')) {
+    e.preventDefault();
+    const prev = Math.max(state.selectedIdx - 1, 0);
+    selectItem(prev);
+  }
+});
+</script>
+</body>
+</html>
